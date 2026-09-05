@@ -16,10 +16,9 @@
 # # FLASK_DEBUG=true enables the Werkzeug debug middleware: its traceback   ##
 # # pages disclose source code and variable contents to ANY client with no  ##
 # # authentication, and its PIN-gated console is remote code execution.     ##
-# # The debugpy port is an unauthenticated Python debugger. ALL published   ##
-# # ports (8443, 8080, 5678, mailhog) are therefore bound to 127.0.0.1 by   ##
-# # default so they stay on the developer's machine. If Docker runs inside  ##
-# # a VM and you need the app from outside it, set UCM_DEV_BIND to the      ##
+# # The debugpy port is unauthenticated. Published ports, including       ##
+# # middleware 8081 and MailHog, stay loopback-only by default.           ##
+# # If Docker runs inside a VM and you need the app from outside it, set  ##
 # # VM-internal interface — that re-exposes the Werkzeug debugger to        ##
 # # whatever can reach it, so only do so on a trusted, isolated network.    ##
 # # Never use this file in production.                                      ##
@@ -29,10 +28,11 @@
 
 services:
   ucm:
+    image: ultimate-ca-manager:dev
+    pull_policy: build
     build:
       context: .
       dockerfile: Dockerfile
-    
     # Mount source code for hot-reload
     volumes:
       - ./backend:/opt/ucm/backend:rw
@@ -132,3 +132,101 @@ services:
   #   
   #   networks:
   #     - ucm-network
+  # EJBCA integration stack (development only)
+  # Start with: docker compose --env-file .env.ejbca.example -f docker-compose.yml -f docker-compose.dev.yml --profile migration up
+  ejbca-database:
+    image: "${EJBCA_DATABASE_IMAGE:-postgres:16-alpine}"
+    container_name: ${EJBCA_DATABASE_CONTAINER_NAME:-ucm-ejbca-database}
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${EJBCA_DB_NAME:-ejbca}
+      POSTGRES_USER: ${EJBCA_DB_USER:-ejbca}
+      POSTGRES_PASSWORD: ${EJBCA_DB_PASSWORD:-change-me-in-development}
+    volumes:
+      - ejbca-database:/var/lib/postgresql/data
+    networks:
+      - pki-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    profiles:
+      - migration
+
+  ejbca:
+    image: "${EJBCA_IMAGE:-keyfactor/ejbca-ce:latest}"
+    container_name: ${EJBCA_CONTAINER_NAME:-ucm-ejbca}
+    hostname: ejbca
+    restart: unless-stopped
+    depends_on:
+      ejbca-database:
+        condition: service_healthy
+    environment:
+      DATABASE_JDBC_URL: jdbc:postgresql://ejbca-database:5432/${EJBCA_DB_NAME:-ejbca}
+      DATABASE_USER: ${EJBCA_DB_USER:-ejbca}
+      DATABASE_PASSWORD: ${EJBCA_DB_PASSWORD:-change-me-in-development}
+      LOG_LEVEL_APP: ${EJBCA_LOG_LEVEL_APP:-INFO}
+      LOG_LEVEL_SERVER: ${EJBCA_LOG_LEVEL_SERVER:-INFO}
+      # simple is suitable only for isolated development; use proper mTLS in production.
+      TLS_SETUP_ENABLED: ${EJBCA_TLS_SETUP_ENABLED:-simple}
+    expose:
+      - "8080"
+      - "8443"
+    networks:
+      - pki-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -k -f https://127.0.0.1:8443/ejbca/ >/dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 90s
+    profiles:
+      - migration
+
+  ejbca-gateway:
+    build:
+      context: ./ejbca-gateway
+      dockerfile: Dockerfile
+    container_name: ${EJBCA_GATEWAY_CONTAINER_NAME:-ucm-ejbca-gateway}
+    restart: unless-stopped
+    depends_on:
+      ejbca:
+        # EJBCA has a long first boot; the gateway retries API calls in dev.
+        condition: service_started
+    environment:
+      EJBCA_GATEWAY_ENV: development
+      EJBCA_GATEWAY_HOST: 0.0.0.0
+      EJBCA_GATEWAY_PORT: 8081
+      EJBCA_API_URL: ${EJBCA_API_URL:-https://ejbca:8443/ejbca/ejbca-rest-api}
+      EJBCA_TLS_VERIFY: ${EJBCA_TLS_VERIFY:-false}
+      EJBCA_REQUEST_TIMEOUT_SECONDS: ${EJBCA_REQUEST_TIMEOUT_SECONDS:-30}
+      EJBCA_GATEWAY_LOG_LEVEL: ${EJBCA_GATEWAY_LOG_LEVEL:-DEBUG}
+    expose:
+      - "8081"
+    ports:
+      - "${UCM_DEV_BIND:-127.0.0.1}:${EJBCA_GATEWAY_PORT:-8081}:8081"
+    networks:
+      - ucm-network
+      - pki-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8081/api/v3/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    labels:
+      - "com.ultimate-ca-manager.service=ejbca-gateway"
+    profiles:
+      - migration
+
+networks:
+  pki-network:
+    driver: bridge
+    internal: true
+
+volumes:
+  ejbca-database:
+    driver: local
+
