@@ -112,9 +112,6 @@ SECURITY_AUDIT.md
 .env.lab
 .env*.local
 docs/
+tasks/
 # Keep the V3 migration assessment source-controlled while preserving the
 # existing ignore policy for other docs.
-!docs/
-docs/*
-!docs/v3-migration/
-!docs/v3-migration/*.md
