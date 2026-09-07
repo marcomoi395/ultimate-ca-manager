@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 import { Test } from '@nestjs/testing';
 import { AppModule } from '../src/app.module';
-import { CertificatesController } from '../src/facades.controller';
+import { CertificatesController } from '../src/certificates/certificates.controller';
 
 describe('facade route registration', () => {
   it('boots all read and supporting facade controllers', async () => {
