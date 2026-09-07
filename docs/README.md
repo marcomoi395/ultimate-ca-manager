@@ -17,6 +17,7 @@ Technical documentation for Ultimate Certificate Manager.
 ## API
 
 - **[API_REFERENCE.md](./API_REFERENCE.md)** — Complete API reference (347+ endpoints)
+- **[v3-migration/README.md](./v3-migration/README.md)** — V2 frontend inventory, EJBCA REST catalog, and V2 → V3 migration matrix
 
 ## Operations
 
