@@ -1,9 +1,10 @@
 import type { AuthContext } from './contracts';
 
 export interface AdminAuthRequest {
-  authorization: string;
+  authorization?: string;
   correlationId?: string;
   sourceIp?: string;
+  authContext?: AuthContext;
 }
 
 export class AdminAuthGuard {
