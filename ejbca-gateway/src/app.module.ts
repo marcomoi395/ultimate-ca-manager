@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD, Reflector } from '@nestjs/core';
 import { V3AuthGuard } from './common/v3-auth.guard';
+import { PermissionGuard } from './common/permission.guard';
 import { FoundationModule } from './foundation/foundation.module';
 import { CertificatesModule } from './certificates/certificates.module';
 import { CasModule } from './cas/cas.module';
@@ -12,6 +13,7 @@ import { SupportingModule } from './supporting/supporting.module';
   imports: [FoundationModule, CertificatesModule, CasModule, CsrsModule, TemplatesModule, SupportingModule],
   providers: [
     { provide: APP_GUARD, useFactory: (reflector: Reflector) => new V3AuthGuard(reflector, process.env.GATEWAY_ADMIN_TOKEN ?? 'change-me'), inject: [Reflector] },
+    { provide: APP_GUARD, useClass: PermissionGuard },
   ],
 })
 export class AppModule {}
