@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { CasController } from '../facades.controller';
+import { CaTemplatesController, CasController } from '../facades.controller';
 
-@Module({ controllers: [CasController] })
+@Module({ controllers: [CasController, CaTemplatesController] })
 export class CasModule {}

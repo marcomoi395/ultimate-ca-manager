@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { SupportingController } from '../facades.controller';
+import { EkuController, HsmController, ImportController, MscaController } from '../facades.controller';
 
-@Module({ controllers: [SupportingController] })
+@Module({ controllers: [ImportController, EkuController, MscaController, HsmController] })
 export class SupportingModule {}
