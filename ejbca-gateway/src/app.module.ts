@@ -1,5 +1,6 @@
 import { Controller, Get, Module } from '@nestjs/common';
 import { contractResponse, healthResponse } from './foundation/contracts';
+import { CertificatesController, CasController, CsrsController, TemplatesController, SupportingController } from './facades.controller';
 
 @Controller('health')
 class HealthController {
@@ -18,6 +19,6 @@ class ContractController {
 }
 
 @Module({
-  controllers: [HealthController, ContractController],
+  controllers: [HealthController, ContractController, CertificatesController, CasController, CsrsController, TemplatesController, SupportingController],
 })
 export class AppModule {}
