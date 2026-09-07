@@ -59,6 +59,7 @@ services:
       
       # Verbose SQL logging
       - SQL_DEBUG=false  # Set true if needed (very verbose!)
+      - UCM_INTERNAL_AUTH_SECRET=${UCM_INTERNAL_AUTH_SECRET:-change-me-in-development}
       
       # Test SMTP (use Mailhog or similar)
       - UCM_SMTP_ENABLED=false
@@ -205,9 +206,19 @@ services:
       EJBCA_GATEWAY_HOST: 0.0.0.0
       EJBCA_GATEWAY_PORT: 8081
       EJBCA_API_URL: ${EJBCA_API_URL:-https://ejbca:8443/ejbca/ejbca-rest-api}
-      EJBCA_TLS_VERIFY: ${EJBCA_TLS_VERIFY:-false}
-      EJBCA_REQUEST_TIMEOUT_SECONDS: ${EJBCA_REQUEST_TIMEOUT_SECONDS:-30}
-      EJBCA_GATEWAY_LOG_LEVEL: ${EJBCA_GATEWAY_LOG_LEVEL:-DEBUG}
+      EJBCA_CA_CERT_FILE: ${EJBCA_CA_CERT_FILE:-/run/secrets/ejbca/ca.crt}
+      EJBCA_CLIENT_CERT_FILE: ${EJBCA_CLIENT_CERT_FILE:-/run/secrets/ejbca/client.crt}
+      EJBCA_CLIENT_KEY_FILE: ${EJBCA_CLIENT_KEY_FILE:-/run/secrets/ejbca/client.key}
+      EJBCA_TIMEOUT_MS: ${EJBCA_TIMEOUT_MS:-30000}
+      UCM_AUTH_BASE_URL: ${UCM_AUTH_BASE_URL:-https://ucm:8443}
+      UCM_INTERNAL_AUTH_SECRET: ${UCM_INTERNAL_AUTH_SECRET:-change-me-in-development}
+    volumes:
+      # Mount gateway source for NestJS hot-reload during development.
+      - ./ejbca-gateway:/app:rw
+      # Keep image-installed dependencies available when /app is bind-mounted.
+      - /app/node_modules
+      - ${EJBCA_CERTS_DIR:-./secrets/ejbca}:/run/secrets/ejbca:ro
+    command: bunx nest start --watch
     expose:
       - "8081"
     ports:

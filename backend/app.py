@@ -1615,12 +1615,15 @@ def register_blueprints(app):
     from api.ocsp_routes import ocsp_bp
     from api.health_routes import health_bp
     from api.scep_protocol import bp as scep_protocol_bp
+    from api.internal_auth import bp as internal_auth_bp
     
+    # Register internal auth before the UI catch-all.
+    app.register_blueprint(internal_auth_bp)
+
     # Register Unified API v2.0 FIRST (routes already have /api/* prefix)
     # This must be before ui_bp which has catch-all routing
     from api.v2 import register_api_v2
     register_api_v2(app)
-    
     # Public endpoints (no auth, no /api prefix - standard paths)
     app.register_blueprint(cdp_bp, url_prefix='/cdp')     # CRL Distribution Points
     app.register_blueprint(aia_bp, url_prefix='/ca')      # AIA CA Issuers (RFC 5280)
