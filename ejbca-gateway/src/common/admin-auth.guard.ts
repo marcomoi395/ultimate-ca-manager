@@ -1,3 +1,4 @@
+import { UnauthorizedException } from '@nestjs/common';
 import type { AuthContext } from './contracts';
 
 export interface AdminAuthRequest {
@@ -12,7 +13,7 @@ export class AdminAuthGuard {
 
   authorize(request: AdminAuthRequest | undefined): AuthContext {
     if (!request || request.authorization !== `Bearer ${this.expectedToken}`) {
-      throw new Error('Unauthorized');
+      throw new UnauthorizedException('Unauthorized');
     }
 
     return {

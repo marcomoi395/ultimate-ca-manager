@@ -8,7 +8,7 @@ import { CasModule } from './cas/cas.module';
 import { CsrsModule } from './csrs/csrs.module';
 import { TemplatesModule } from './templates/templates.module';
 import { SupportingModule } from './supporting/supporting.module';
-
+@Controller('health')
 @PublicRoute()
 class HealthController {
   @Get()
@@ -17,6 +17,7 @@ class HealthController {
   }
 }
 
+@Controller('meta/contract')
 @PublicRoute()
 class ContractController {
   @Get()
