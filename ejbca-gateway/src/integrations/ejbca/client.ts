@@ -2,8 +2,6 @@ import type { V3Error } from '../../common/contracts';
 
 export interface EjbcaConfig {
   baseUrl: string;
-  username: string;
-  password: string;
   timeoutMs?: number;
 }
 
@@ -28,10 +26,7 @@ export class EjbcaClient {
   requestOptions(path: string): RequestInit & { url: string } {
     return {
       url: new URL(path, this.config.baseUrl).toString(),
-      headers: {
-        authorization: `Basic ${Buffer.from(`${this.config.username}:${this.config.password}`).toString('base64')}`,
-        accept: 'application/json',
-      },
+      headers: { accept: 'application/json' },
       signal: AbortSignal.timeout(this.config.timeoutMs ?? 10_000),
     };
   }

@@ -8,8 +8,10 @@ describe('EJBCA client', () => {
     expect(JSON.stringify(error)).not.toContain('secret');
   });
 
-  it('builds authenticated read requests from configuration', () => {
-    const client = new EjbcaClient({ baseUrl: 'https://ejbca.test', username: 'u', password: 'p' });
-    expect(client.requestOptions('/ca').headers?.authorization).toBe(`Basic ${Buffer.from('u:p').toString('base64')}`);
+  it('builds authenticated request options without exposing credentials', () => {
+    const client = new EjbcaClient({ baseUrl: 'https://ejbca.test', timeoutMs: 5000 });
+    const options = client.requestOptions('/ca');
+    expect(options.url).toBe('https://ejbca.test/ca');
+    expect(options.headers?.authorization).toBeUndefined();
   });
 });

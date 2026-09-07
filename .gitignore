@@ -45,6 +45,7 @@ wiki/
 # Application
 .env
 .env.ejbca
+secrets/ejbca/
 backend/data/*.db
 backend/data/*.db-*
 backend/data/ca/*

@@ -1,18 +1,30 @@
+import { readFileSync } from 'node:fs';
 import { normalizeEjbcaError } from './client';
 
 export interface EjbcaHttpConfig {
   baseUrl: string;
-  username: string;
-  password: string;
+  caCertFile: string;
+  clientCertFile: string;
+  clientKeyFile: string;
   timeoutMs?: number;
   fetcher?: typeof fetch;
 }
 
+interface BunTlsRequestInit extends RequestInit {
+  tls: { ca: string; cert: string; key: string };
+}
+
 export class EjbcaHttpClient {
   private readonly fetcher: typeof fetch;
+  private readonly tls: BunTlsRequestInit['tls'];
 
   constructor(private readonly config: EjbcaHttpConfig) {
     this.fetcher = config.fetcher ?? fetch;
+    this.tls = {
+      ca: readFileSync(config.caCertFile, 'utf8'),
+      cert: readFileSync(config.clientCertFile, 'utf8'),
+      key: readFileSync(config.clientKeyFile, 'utf8'),
+    };
   }
 
   async request(path: string, init: RequestInit = {}): Promise<unknown> {
@@ -25,13 +37,10 @@ export class EjbcaHttpClient {
         response = await this.fetcher(new URL(path, this.config.baseUrl), {
           ...init,
           method,
-          headers: {
-            accept: 'application/json',
-            authorization: `Basic ${Buffer.from(`${this.config.username}:${this.config.password}`).toString('base64')}`,
-            ...init.headers,
-          },
+          headers: { accept: 'application/json', ...init.headers },
           signal: AbortSignal.timeout(this.config.timeoutMs ?? 10_000),
-        });
+          tls: this.tls,
+        } as BunTlsRequestInit);
       } catch (error) {
         if (attempt + 1 === attempts) throw error;
         continue;
