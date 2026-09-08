@@ -1,4 +1,4 @@
-import { Inject, Injectable, NotFoundException, NotImplementedException } from '@nestjs/common';
+import { ConflictException, Inject, Injectable, NotFoundException, NotImplementedException } from '@nestjs/common';
 import { EjbcaResourceAdapter } from '../integrations/ejbca/resource-adapter';
 import { mapCertificatePublicData } from './public-mapper';
 import type { CertificateListQuery } from './dtos/certificate-list.query';
@@ -52,7 +52,9 @@ export class CertificatesService {
       ? await this.reader({ page: 1, limit: 100 })
       : await this.adapter!.getCertificate(id);
     const certificates = this.extractCertificates(result).map(mapCertificatePublicData);
-    const match = certificates.find((certificate) => certificate.serial_number === id || certificate.id === id);
+    const matches = certificates.filter((certificate) => certificate.serial_number === id || certificate.id === id);
+    if (matches.length > 1) throw new ConflictException(`Certificate ${id} is ambiguous`);
+    const match = matches[0];
     if (!match) throw new NotFoundException(`Certificate ${id} not found`);
     return match;
   }

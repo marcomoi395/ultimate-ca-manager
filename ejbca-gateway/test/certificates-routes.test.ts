@@ -38,4 +38,10 @@ describe('certificate routes', () => {
 
     expect(calls).toEqual(['stats', 'compliance', 'lint-status', 'list', 'detail']);
   });
+  it('requires read:certificates on list and detail handlers', () => {
+    const controller = CertificatesController.prototype;
+    expect(Reflect.getMetadata('v3_required_permission', controller.list)).toBe('read:certificates');
+    expect(Reflect.getMetadata('v3_required_permission', controller.detail)).toBe('read:certificates');
+    expect(Reflect.getMetadata('v3_required_permission', controller.stats)).toBe('read:certificates');
+  });
 });

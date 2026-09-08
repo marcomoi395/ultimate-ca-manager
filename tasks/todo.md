@@ -26,12 +26,11 @@
   - Verification: focused DTO and adapter tests, full gateway suite, and build.
   - Dependencies: Tasks 1–2
   - Complexity: Medium
-- [ ] Task 4: Deliver v3 list and detail endpoints end-to-end
-  - Acceptance: auth/permission, mapped list/detail envelopes, pagination, 404/409, upstream/no-v2 protections.
-  - Verification: focused route/service/auth/error tests, gateway build, optional EJBCA list→detail runtime check.
+- [x] Task 4: Deliver v3 list and detail endpoints end-to-end
+  - Acceptance: auth/permission metadata, mapped list/detail envelopes, pagination, 404/409, and no-v2 protections.
+  - Verification: focused route/service tests, full gateway suite, and build.
   - Dependencies: Tasks 2–3
   - Complexity: Medium
-
 ## Checkpoint: Read path integration
 
 - [ ] Focused list/detail tests and gateway build pass.

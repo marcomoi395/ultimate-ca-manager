@@ -1,12 +1,14 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
-import { CertificatesService } from './certificates.service';
+import { RequirePermission } from '../common/permission.guard';
 import { parseCertificateListQuery, type CertificateListQueryInput } from './dtos/certificate-list.query';
+import { CertificatesService } from './certificates.service';
 
 @Controller('certificates')
 export class CertificatesController {
   constructor(private readonly service: CertificatesService) {}
 
   @Get('stats')
+  @RequirePermission('read:certificates')
   stats() { return this.service.stats(); }
 
   @Get('compliance')
@@ -14,8 +16,8 @@ export class CertificatesController {
 
   @Get('lint/status')
   lintStatus() { return this.service.lintStatus(); }
-
   @Get()
+  @RequirePermission('read:certificates')
   list(@Query() query: CertificateListQueryInput) {
     return this.service.list(parseCertificateListQuery(query));
   }
@@ -24,8 +26,8 @@ export class CertificatesController {
   lint(@Param('id') id: string, @Query('profile') _profile?: string) {
     return this.service.lint(id);
   }
-
   @Get(':id')
+  @RequirePermission('read:certificates')
   detail(@Param('id') id: string) {
     return this.service.getById(id);
   }
