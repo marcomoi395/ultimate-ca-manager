@@ -4,17 +4,33 @@ export interface EJBCARequestClient {
 
 export class EjbcaResourceAdapter {
   constructor(private readonly client: EJBCARequestClient) {}
+
   listCertificates(query?: URLSearchParams): Promise<unknown> {
+    const page = Number(query?.get('page') ?? '1');
     const limit = Number(query?.get('limit') ?? '100');
-    return this.client.request('/v1/certificate/search', {
+    return this.client.request('/v2/certificate/search', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ max_number_of_results: limit, criteria: [{ property: 'STATUS', operation: 'EQUAL', value: 'CERT_ACTIVE' }] }),
+      body: JSON.stringify({
+        pagination: { current_page: page, page_size: limit },
+        criteria: [{ property: 'STATUS', operation: 'EQUAL', value: 'CERT_ACTIVE' }],
+      }),
     });
   }
 
+  getCertificateCount(): Promise<unknown> {
+    return this.client.request('/v2/certificate/count');
+  }
+
   getCertificate(id: string): Promise<unknown> {
-    return this.client.request(`/v1/certificate/${encodeURIComponent(id)}`);
+    return this.client.request('/v1/certificate/search', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        max_number_of_results: 1,
+        criteria: [{ property: 'SERIALNUMBER', operation: 'EQUAL', value: id }],
+      }),
+    });
   }
 
   listCas(query?: URLSearchParams): Promise<unknown> {

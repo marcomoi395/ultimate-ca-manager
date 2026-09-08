@@ -1,74 +1,107 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException, NotImplementedException } from '@nestjs/common';
 import { EjbcaResourceAdapter } from '../integrations/ejbca/resource-adapter';
 import type { CertificateListQuery } from './dtos/certificate-list.query';
 
 type CertificateReader = (query: CertificateListQuery) => Promise<unknown>;
 
+export interface CertificateReadResult {
+  data: unknown;
+  meta: { page: number; per_page: number; total: number };
+}
+
 @Injectable()
 export class CertificatesService {
   private readonly reader?: CertificateReader;
-  private readonly adapter?: EjbcaResourceAdapter;
 
   constructor(@Inject(EjbcaResourceAdapter) source: EjbcaResourceAdapter | CertificateReader) {
     if (typeof source === 'function') this.reader = source;
     else this.adapter = source;
   }
 
-  async list(query: CertificateListQuery): Promise<unknown> {
-    if (this.reader) {
-      const data = await this.reader(query);
-      return { data, meta: { page: query.page, limit: query.limit } };
-    }
-    const params = new URLSearchParams();
-    params.set('page', String(query.page));
-    params.set('limit', String(query.limit));
-    if (query.status) params.set('status', query.status);
-    if (query.caId) params.set('ca_id', query.caId);
-    if (query.source) params.set('source', query.source);
-    if (query.search) params.set('search', query.search);
-    if (query.hasKey !== undefined) params.set('has_key', String(query.hasKey));
-    if (query.templateModified !== undefined) params.set('template_modified', String(query.templateModified));
-    if (query.sortBy) params.set('sort_by', query.sortBy);
-    if (query.sortOrder) params.set('sort_order', query.sortOrder);
-    return this.adapter!.listCertificates(params);
+  private readonly adapter?: EjbcaResourceAdapter;
+
+  async list(query: CertificateListQuery): Promise<CertificateReadResult> {
+    const result = this.reader
+      ? await this.reader(query)
+      : await this.adapter!.listCertificates(this.toEjbcaSearchQuery(query));
+    const certificates = this.extractCertificates(result);
+    return {
+      data: certificates,
+      meta: {
+        page: query.page,
+        per_page: query.limit,
+        total: this.extractTotal(result, certificates.length),
+      },
+    };
   }
 
-  async stats(): Promise<unknown> {
-    return this.adapter ? this.adapter.request('/v1/certificate/stats') : this.list({ page: 1, limit: 100 });
+  stats(): Promise<unknown> {
+    return this.adapter ? this.adapter.getCertificateCount() : this.list({ page: 1, limit: 100 });
   }
 
-  async compliance(): Promise<unknown> {
-    return this.adapter ? this.adapter.request('/v1/certificate/compliance') : this.list({ page: 1, limit: 100 });
+  compliance(): Promise<never> {
+    throw new NotImplementedException('EJBCA does not provide UCM compliance statistics');
   }
 
-  async lintStatus(): Promise<unknown> {
-    return this.adapter ? this.adapter.request('/v1/certificate/lint/status') : this.list({ page: 1, limit: 100 });
+  lintStatus(): Promise<never> {
+    throw new NotImplementedException('Certificate linting is not an EJBCA REST operation');
   }
 
   async getById(id: string): Promise<unknown> {
-    if (this.reader) {
-      const result = await this.reader({ page: 1, limit: 100 });
-      if (!Array.isArray(result)) return result;
-      const match = result.find((certificate) => {
-        if (!certificate || typeof certificate !== 'object' || !('id' in certificate)) return false;
-        return certificate.id === id;
-      });
-      if (!match) throw new NotFoundException(`Certificate ${id} not found`);
-      return match;
+    const result = this.reader
+      ? await this.reader({ page: 1, limit: 100 })
+      : await this.adapter!.getCertificate(id);
+    const certificates = this.extractCertificates(result);
+    const match = certificates.find((certificate) => certificate.serial_number === id || certificate.id === id);
+    if (!match) throw new NotFoundException(`Certificate ${id} not found`);
+    return match;
+  }
+
+  mutate(): Promise<never> {
+    throw new NotImplementedException('Certificate mutations are owned by UCM and are not exposed by EJBCA REST');
+  }
+
+  exportFile(): Promise<never> {
+    throw new NotImplementedException('Certificate export through the EJBCA adapter is not implemented');
+  }
+
+  lint(_id?: string, _profile?: string): Promise<never> {
+    throw new NotImplementedException('Certificate linting is not an EJBCA REST operation');
+  }
+
+  private toEjbcaSearchQuery(query: CertificateListQuery): URLSearchParams {
+    const params = new URLSearchParams();
+    params.set('page', String(query.page));
+    params.set('limit', String(query.limit));
+    return params;
+  }
+
+  private extractCertificates(result: unknown): Record<string, unknown>[] {
+    if (Array.isArray(result)) return result.filter(this.isRecord);
+    if (!result || typeof result !== 'object') return [];
+    const value = result as Record<string, unknown>;
+    if (Array.isArray(value.certificates)) return value.certificates.filter(this.isRecord);
+    if (Array.isArray(value.data)) return value.data.filter(this.isRecord);
+    return [];
+  }
+
+  private extractTotal(result: unknown, fallback: number): number {
+    if (result && typeof result === 'object') {
+      const value = result as Record<string, unknown>;
+      if (typeof value.total === 'number') return value.total;
+      if (value.pagination_summary && typeof value.pagination_summary === 'object') {
+        const total = (value.pagination_summary as Record<string, unknown>).total;
+        if (typeof total === 'number') return total;
+      }
+      if (value.pagination && typeof value.pagination === 'object') {
+        const total = (value.pagination as Record<string, unknown>).total;
+        if (typeof total === 'number') return total;
+      }
     }
-    return this.adapter!.getCertificate(id);
+    return fallback;
   }
-  async mutate(path: string, method: string, body?: unknown): Promise<unknown> {
-    const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
-    const headers = isFormData || body === undefined ? undefined : { 'content-type': 'application/json' };
-    return this.adapter!.request(path, {
-      method,
-      headers,
-      body: body === undefined ? undefined : isFormData ? body as FormData : JSON.stringify(body),
-    });
-  }
-  async lint(id: string, profile?: string): Promise<unknown> {
-    const suffix = profile ? `?profile=${encodeURIComponent(profile)}` : '';
-    return this.adapter ? this.adapter.request(`/v1/certificate/${encodeURIComponent(id)}/lint${suffix}`) : this.getById(id);
+
+  private isRecord(value: unknown): value is Record<string, unknown> {
+    return value !== null && typeof value === 'object' && !Array.isArray(value);
   }
 }

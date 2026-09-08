@@ -8,6 +8,7 @@ function adapter() {
   return {
     listCertificates: async () => ({ certificates: [{ id: 'cert-1' }] }),
     getCertificate: async (id: string) => ({ id }),
+    getCertificateCount: async () => ({ count: 1 }),
   } as never;
 }
 
@@ -23,9 +24,9 @@ describe('endpoint response contracts', () => {
       new EnvelopeInterceptor().intercept(envelopeContext(), { handle: () => of(raw) } as never),
     );
     expect(result).toEqual({
-      data: { certificates: [{ id: 'cert-1' }] },
+      data: [{ id: 'cert-1' }],
       message: 'ok',
-      meta: {},
+      meta: { page: 1, per_page: 20, total: 1 },
     });
   });
 });
