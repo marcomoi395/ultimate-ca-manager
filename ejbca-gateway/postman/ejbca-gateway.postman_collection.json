@@ -7,20 +7,64 @@
   "auth": {
     "type": "apikey",
     "apikey": [
-      { "key": "key", "value": "x-api-key", "type": "string" },
-      { "key": "value", "value": "{{apiKey}}", "type": "string" },
-      { "key": "in", "value": "header", "type": "string" }
+      {
+        "key": "key",
+        "value": "x-api-key",
+        "type": "string"
+      },
+      {
+        "key": "value",
+        "value": "{{apiKey}}",
+        "type": "string"
+      },
+      {
+        "key": "in",
+        "value": "header",
+        "type": "string"
+      }
     ]
   },
   "variable": [
-    { "key": "baseUrl", "value": "http://localhost:8081/api/v3", "type": "string" },
-    { "key": "apiKey", "value": "", "type": "string" },
-    { "key": "caId", "value": "1", "type": "string" },
-    { "key": "certificateId", "value": "1", "type": "string" },
-    { "key": "csrId", "value": "1", "type": "string" },
-    { "key": "templateId", "value": "1", "type": "string" },
-    { "key": "mscaId", "value": "1", "type": "string" },
-    { "key": "requestId", "value": "1", "type": "string" }
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8081/api/v3",
+      "type": "string"
+    },
+    {
+      "key": "apiKey",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "caId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "certificateId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "csrId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "templateId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "mscaId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "requestId",
+      "value": "1",
+      "type": "string"
+    }
   ],
   "item": [
     {
@@ -31,8 +75,18 @@
           "request": {
             "method": "GET",
             "header": [],
-            "auth": { "type": "noauth" },
-            "url": { "raw": "{{baseUrl}}/health", "host": ["{{baseUrl}}"], "path": ["health"] }
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health"
+              ]
+            }
           }
         },
         {
@@ -40,8 +94,19 @@
           "request": {
             "method": "GET",
             "header": [],
-            "auth": { "type": "noauth" },
-            "url": { "raw": "{{baseUrl}}/meta/contract", "host": ["{{baseUrl}}"], "path": ["meta", "contract"] }
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/meta/contract",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "meta",
+                "contract"
+              ]
+            }
           }
         },
         {
@@ -49,7 +114,16 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": { "raw": "{{baseUrl}}/system/chain-repair", "host": ["{{baseUrl}}"], "path": ["system", "chain-repair"] }
+            "url": {
+              "raw": "{{baseUrl}}/system/chain-repair",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "system",
+                "chain-repair"
+              ]
+            }
           }
         },
         {
@@ -57,7 +131,16 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": { "raw": "{{baseUrl}}/system/hsm-status", "host": ["{{baseUrl}}"], "path": ["system", "hsm-status"] }
+            "url": {
+              "raw": "{{baseUrl}}/system/hsm-status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "system",
+                "hsm-status"
+              ]
+            }
           }
         }
       ]
@@ -67,60 +150,960 @@
       "item": [
         {
           "name": "GET list CAs",
-          "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/cas", "host": ["{{baseUrl}}"], "path": ["cas"] } }
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/cas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cas"
+              ]
+            }
+          }
         },
         {
           "name": "GET CA certificates",
-          "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/cas/{{caId}}/certificates", "host": ["{{baseUrl}}"], "path": ["cas", ":caId", "certificates"], "variable": [{ "key": "caId", "value": "{{caId}}" }] } }
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/cas/{{caId}}/certificates",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cas",
+                ":caId",
+                "certificates"
+              ],
+              "variable": [
+                {
+                  "key": "caId",
+                  "value": "{{caId}}"
+                }
+              ]
+            }
+          }
         },
         {
           "name": "GET CA details",
-          "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/cas/{{caId}}", "host": ["{{baseUrl}}"], "path": ["cas", ":caId"], "variable": [{ "key": "caId", "value": "{{caId}}" }] } }
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/cas/{{caId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cas",
+                ":caId"
+              ],
+              "variable": [
+                {
+                  "key": "caId",
+                  "value": "{{caId}}"
+                }
+              ]
+            }
+          }
         },
         {
           "name": "GET CA templates",
-          "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/cas/{{caId}}/templates", "host": ["{{baseUrl}}"], "path": ["cas", ":caId", "templates"], "variable": [{ "key": "caId", "value": "{{caId}}" }] } }
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/cas/{{caId}}/templates",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cas",
+                ":caId",
+                "templates"
+              ],
+              "variable": [
+                {
+                  "key": "caId",
+                  "value": "{{caId}}"
+                }
+              ]
+            }
+          }
         }
       ]
     },
     {
       "name": "Certificates",
       "item": [
-        { "name": "GET list certificates", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/certificates", "host": ["{{baseUrl}}"], "path": ["certificates"] } } },
-        { "name": "GET certificate stats", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/certificates/stats", "host": ["{{baseUrl}}"], "path": ["certificates", "stats"] } } },
-        { "name": "GET certificate compliance", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/certificates/compliance", "host": ["{{baseUrl}}"], "path": ["certificates", "compliance"] } } },
-        { "name": "GET certificate lint status", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/certificates/lint/status", "host": ["{{baseUrl}}"], "path": ["certificates", "lint", "status"] } } },
-        { "name": "GET certificate details", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/certificates/{{certificateId}}", "host": ["{{baseUrl}}"], "path": ["certificates", ":certificateId"], "variable": [{ "key": "certificateId", "value": "{{certificateId}}" }] } } },
-        { "name": "GET certificate lint", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/certificates/{{certificateId}}/lint", "host": ["{{baseUrl}}"], "path": ["certificates", ":certificateId", "lint"], "variable": [{ "key": "certificateId", "value": "{{certificateId}}" }] } } }
+        {
+          "name": "GET list certificates",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/certificates",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "certificates"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET certificate stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/certificates/stats",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "certificates",
+                "stats"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET certificate compliance",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/certificates/compliance",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "certificates",
+                "compliance"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET certificate lint status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/certificates/lint/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "certificates",
+                "lint",
+                "status"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET certificate details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/certificates/{{certificateId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "certificates",
+                ":certificateId"
+              ],
+              "variable": [
+                {
+                  "key": "certificateId",
+                  "value": "{{certificateId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET certificate lint",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/certificates/{{certificateId}}/lint",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "certificates",
+                ":certificateId",
+                "lint"
+              ],
+              "variable": [
+                {
+                  "key": "certificateId",
+                  "value": "{{certificateId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST create certificate",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/certificates",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "certificates"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ca_id\": \"{{caId}}\",\n  \"cn\": \"example.test\",\n  \"cert_type\": \"x509\",\n  \"description\": \"Issued from Postman\",\n  \"key_type\": \"RSA\",\n  \"key_size\": 2048,\n  \"validity_days\": 365\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "PATCH rename certificate",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/certificates/{{certificateId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "certificates",
+                "certificateId"
+              ],
+              "variable": [
+                {
+                  "key": "certificateId",
+                  "value": "{{certificateId}}"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"descr\": \"Updated description\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "POST import certificate",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/certificates/import",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "certificates",
+                "import"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pem_content\": \"-----BEGIN CERTIFICATE-----\\n...\\n-----END CERTIFICATE-----\",\n  \"ca_id\": \"{{caId}}\",\n  \"name\": \"imported-cert\",\n  \"import_key\": false,\n  \"update_existing\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "POST export certificate",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/certificates/{{certificateId}}/export",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "certificates",
+                "certificateId",
+                "export"
+              ],
+              "variable": [
+                {
+                  "key": "certificateId",
+                  "value": "{{certificateId}}"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"format\": \"pem\",\n  \"include_key\": false,\n  \"include_chain\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "POST export all certificates",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/certificates/export",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "certificates",
+                "export"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"format\": \"pem\",\n  \"include_chain\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "POST revoke certificate",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/certificates/{{certificateId}}/revoke",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "certificates",
+                "certificateId",
+                "revoke"
+              ],
+              "variable": [
+                {
+                  "key": "certificateId",
+                  "value": "{{certificateId}}"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"cessation\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "POST unhold certificate",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/certificates/{{certificateId}}/unhold",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "certificates",
+                "certificateId",
+                "unhold"
+              ],
+              "variable": [
+                {
+                  "key": "certificateId",
+                  "value": "{{certificateId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST renew certificate",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/certificates/{{certificateId}}/renew",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "certificates",
+                "certificateId",
+                "renew"
+              ],
+              "variable": [
+                {
+                  "key": "certificateId",
+                  "value": "{{certificateId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST upload certificate key",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/certificates/{{certificateId}}/key",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "certificates",
+                "certificateId",
+                "key"
+              ],
+              "variable": [
+                {
+                  "key": "certificateId",
+                  "value": "{{certificateId}}"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"key\": \"-----BEGIN PRIVATE KEY-----\\n...\\n-----END PRIVATE KEY-----\",\n  \"passphrase\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "POST submit certificate to CT",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/certificates/{{certificateId}}/submit-ct",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "certificates",
+                "certificateId",
+                "submit-ct"
+              ],
+              "variable": [
+                {
+                  "key": "certificateId",
+                  "value": "{{certificateId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST bulk revoke certificates",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/certificates/bulk/revoke",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "certificates",
+                "bulk",
+                "revoke"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ids\": [\n    \"{{certificateId}}\"\n  ],\n  \"reason\": \"unspecified\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "POST bulk renew certificates",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/certificates/bulk/renew",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "certificates",
+                "bulk",
+                "renew"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ids\": [\n    \"{{certificateId}}\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "POST bulk delete certificates",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/certificates/bulk/delete",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "certificates",
+                "bulk",
+                "delete"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ids\": [\n    \"{{certificateId}}\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "POST bulk export certificates",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/certificates/bulk/export",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "certificates",
+                "bulk",
+                "export"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ids\": [\n    \"{{certificateId}}\"\n  ],\n  \"format\": \"pem\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "DELETE certificate",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/certificates/{{certificateId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "certificates",
+                "certificateId"
+              ],
+              "variable": [
+                {
+                  "key": "certificateId",
+                  "value": "{{certificateId}}"
+                }
+              ]
+            }
+          }
+        }
       ]
     },
     {
       "name": "CSRs",
       "item": [
-        { "name": "GET list CSRs", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/csrs", "host": ["{{baseUrl}}"], "path": ["csrs"] } } },
-        { "name": "GET CSR history", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/csrs/history", "host": ["{{baseUrl}}"], "path": ["csrs", "history"] } } },
-        { "name": "GET CSR details", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/csrs/{{csrId}}", "host": ["{{baseUrl}}"], "path": ["csrs", ":csrId"], "variable": [{ "key": "csrId", "value": "{{csrId}}" }] } } }
+        {
+          "name": "GET list CSRs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/csrs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "csrs"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET CSR history",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/csrs/history",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "csrs",
+                "history"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET CSR details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/csrs/{{csrId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "csrs",
+                ":csrId"
+              ],
+              "variable": [
+                {
+                  "key": "csrId",
+                  "value": "{{csrId}}"
+                }
+              ]
+            }
+          }
+        }
       ]
     },
     {
       "name": "Templates",
       "item": [
-        { "name": "GET list templates", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/templates", "host": ["{{baseUrl}}"], "path": ["templates"] } } },
-        { "name": "GET template details", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/templates/{{templateId}}", "host": ["{{baseUrl}}"], "path": ["templates", ":templateId"], "variable": [{ "key": "templateId", "value": "{{templateId}}" }] } } }
+        {
+          "name": "GET list templates",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/templates",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "templates"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET template details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/templates/{{templateId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "templates",
+                ":templateId"
+              ],
+              "variable": [
+                {
+                  "key": "templateId",
+                  "value": "{{templateId}}"
+                }
+              ]
+            }
+          }
+        }
       ]
     },
     {
       "name": "Supporting",
       "item": [
-        { "name": "GET known EKUs", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/eku/known", "host": ["{{baseUrl}}"], "path": ["eku", "known"] } } },
-        { "name": "GET HSM providers", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/hsm/providers", "host": ["{{baseUrl}}"], "path": ["hsm", "providers"] } } },
-        { "name": "GET HSM keys", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/hsm/keys", "host": ["{{baseUrl}}"], "path": ["hsm", "keys"] } } },
-        { "name": "POST analyze import", "request": { "method": "POST", "header": [], "url": { "raw": "{{baseUrl}}/import/analyze", "host": ["{{baseUrl}}"], "path": ["import", "analyze"] } } },
-        { "name": "POST execute import", "request": { "method": "POST", "header": [], "url": { "raw": "{{baseUrl}}/import/execute", "host": ["{{baseUrl}}"], "path": ["import", "execute"] } } },
-        { "name": "GET Microsoft CA enabled", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/microsoft-cas/enabled", "host": ["{{baseUrl}}"], "path": ["microsoft-cas", "enabled"] } } },
-        { "name": "GET pending Microsoft CA requests", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/microsoft-cas/requests/pending", "host": ["{{baseUrl}}"], "path": ["microsoft-cas", "requests", "pending"] } } },
-        { "name": "GET Microsoft CA templates", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/microsoft-cas/{{mscaId}}/templates", "host": ["{{baseUrl}}"], "path": ["microsoft-cas", ":mscaId", "templates"], "variable": [{ "key": "mscaId", "value": "{{mscaId}}" }] } } },
-        { "name": "GET Microsoft CA request", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/microsoft-cas/{{mscaId}}/requests/{{requestId}}", "host": ["{{baseUrl}}"], "path": ["microsoft-cas", ":mscaId", "requests", ":requestId"], "variable": [{ "key": "mscaId", "value": "{{mscaId}}" }, { "key": "requestId", "value": "{{requestId}}" }] } } }
+        {
+          "name": "GET known EKUs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/eku/known",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "eku",
+                "known"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET HSM providers",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/hsm/providers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "hsm",
+                "providers"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET HSM keys",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/hsm/keys",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "hsm",
+                "keys"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST analyze import",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/import/analyze",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "import",
+                "analyze"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST execute import",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/import/execute",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "import",
+                "execute"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET Microsoft CA enabled",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/microsoft-cas/enabled",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "microsoft-cas",
+                "enabled"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET pending Microsoft CA requests",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/microsoft-cas/requests/pending",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "microsoft-cas",
+                "requests",
+                "pending"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET Microsoft CA templates",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/microsoft-cas/{{mscaId}}/templates",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "microsoft-cas",
+                ":mscaId",
+                "templates"
+              ],
+              "variable": [
+                {
+                  "key": "mscaId",
+                  "value": "{{mscaId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET Microsoft CA request",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/microsoft-cas/{{mscaId}}/requests/{{requestId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "microsoft-cas",
+                ":mscaId",
+                "requests",
+                ":requestId"
+              ],
+              "variable": [
+                {
+                  "key": "mscaId",
+                  "value": "{{mscaId}}"
+                },
+                {
+                  "key": "requestId",
+                  "value": "{{requestId}}"
+                }
+              ]
+            }
+          }
+        }
       ]
     }
   ]

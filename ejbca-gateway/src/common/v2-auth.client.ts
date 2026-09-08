@@ -62,3 +62,45 @@ export class V2AuthClient {
     };
   }
 }
+
+export interface UcmProxyRequest {
+  method?: string;
+  body?: BodyInit;
+  headers?: Record<string, string>;
+  responseType?: 'json' | 'binary';
+}
+
+export interface UcmProxyResponse {
+  status: number;
+  headers: Headers;
+  body: unknown;
+}
+
+export class UcmProxyClient {
+  constructor(
+    private readonly baseUrl: string,
+    private readonly internalSecret: string,
+    private readonly fetcher: typeof fetch = fetch,
+    private readonly rejectUnauthorized = true,
+  ) {}
+
+  async request(path: string, request: UcmProxyRequest = {}): Promise<UcmProxyResponse> {
+    const headers = {
+      accept: 'application/json',
+      'x-ucm-internal-auth': this.internalSecret,
+      ...request.headers,
+    };
+    const response = await this.fetcher(new URL(path.replace(/^\/+/, ''), `${this.baseUrl.replace(/\/$/, '')}/`), {
+      method: request.method ?? 'GET',
+      headers,
+      body: request.body,
+      signal: AbortSignal.timeout(10_000),
+      tls: { rejectUnauthorized: this.rejectUnauthorized },
+    } as RequestInit & { tls: { rejectUnauthorized: boolean } });
+    const contentType = response.headers.get('content-type') ?? '';
+    const body = request.responseType === 'binary'
+      ? await response.arrayBuffer()
+      : contentType.includes('json') ? await response.json() : await response.text();
+    return { status: response.status, headers: response.headers, body };
+  }
+}

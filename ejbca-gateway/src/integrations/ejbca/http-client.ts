@@ -34,10 +34,12 @@ export class EjbcaHttpClient {
 
     for (let attempt = 0; attempt < attempts; attempt += 1) {
       try {
+        const headers = new Headers(init.headers);
+        if (!headers.has('accept')) headers.set('accept', '*/*');
         response = await this.fetcher(new URL(path.replace(/^\/+/, ''), `${this.config.baseUrl.replace(/\/$/, '')}/`), {
           ...init,
           method,
-          headers: { accept: 'application/json', ...init.headers },
+          headers,
           signal: AbortSignal.timeout(this.config.timeoutMs ?? 10_000),
           tls: this.tls,
         } as BunTlsRequestInit);
@@ -56,18 +58,18 @@ export class EjbcaHttpClient {
   }
 
   private async parseBody(response: Response): Promise<unknown> {
+    const contentType = response.headers.get('content-type') ?? '';
+    if (contentType.includes('application/octet-stream') || contentType.includes('application/pkcs') || contentType.includes('application/x-pem-file')) {
+      return new Uint8Array(await response.arrayBuffer());
+    }
     const text = await response.text();
     if (!text) return null;
-    const contentType = response.headers.get('content-type') ?? '';
     if (contentType.includes('text/html') || /^\s*<!doctype html/i.test(text) || /^\s*<html/i.test(text)) {
       throw normalizeEjbcaError(502, { message: 'EJBCA returned HTML instead of JSON' });
     }
-    try {
-      return JSON.parse(text) as unknown;
-    } catch {
-      return text;
-    }
+    try { return JSON.parse(text) as unknown; } catch { return text; }
   }
+
 
   private async safeBody(response: Response): Promise<unknown> {
     try {
