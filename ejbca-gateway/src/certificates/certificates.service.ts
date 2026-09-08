@@ -36,8 +36,34 @@ export class CertificatesService {
     };
   }
 
-  stats(): Promise<unknown> {
-    return this.adapter ? this.adapter.getCertificateCount() : this.list({ page: 1, limit: 100 });
+  async stats(): Promise<unknown> {
+    const result = this.reader
+      ? await this.reader({ page: 1, limit: 100 })
+      : await this.adapter!.listCertificates(new URLSearchParams({ page: '1', limit: '100' }));
+    const records = this.extractCertificates(result);
+    const now = Date.now();
+    const threshold = now + 30 * 86400000;
+    let valid = 0;
+    let expiring = 0;
+    let expired = 0;
+    let revoked = 0;
+    const sources = new Set<string>();
+    for (const record of records) {
+      const source = typeof record.source === 'string' && record.source ? record.source : 'manual';
+      sources.add(source);
+      const isRevoked = record.revoked === true || String(record.status ?? '').toUpperCase().includes('REVOK');
+      const validTo = Date.parse(String(record.valid_to ?? record.validTo ?? ''));
+      if (isRevoked) {
+        revoked += 1;
+      } else if (validTo <= now) {
+        expired += 1;
+      } else if (validTo <= threshold) {
+        expiring += 1;
+      } else {
+        valid += 1;
+      }
+    }
+    return { total: records.length, valid, expiring, expired, revoked, sources: [...sources].sort() };
   }
 
   compliance(): Promise<never> {

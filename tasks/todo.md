@@ -37,6 +37,11 @@
 - [ ] Read routes require `read:certificates`.
 - [ ] Envelope keys remain `data` and `meta` with no nesting/renaming.
 - [ ] No read path invokes Flask v2 or `UcmProxyClient`.
+- [x] Task 5: Implement v2-compatible certificate statistics
+  - Acceptance: complete counts, exact time boundaries, normalized sources, no unsupported guessing.
+  - Verification: stats service tests, full gateway suite, and build.
+  - Dependencies: Task 4
+  - Complexity: Medium
 
 ## Phase 3: Stats and intentional route outcomes
 

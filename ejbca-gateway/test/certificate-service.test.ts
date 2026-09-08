@@ -8,12 +8,14 @@ describe('CertificatesService', () => {
     expect(result.data[0].id).toBe('cert-1');
     expect(result.meta.page).toBe(1);
   });
-  it('uses the EJBCA count endpoint for stats', async () => {
+  it('computes statistics from certificate records', async () => {
     const calls: string[] = [];
-    const adapter = { getCertificateCount: async () => { calls.push('/v2/certificate/count'); return { count: 3 }; } } as never;
+    const adapter = {
+      listCertificates: async () => { calls.push('list'); return { certificates: [{ valid_to: '2099-01-01T00:00:00Z' }] }; },
+    } as never;
     const service = new CertificatesService(adapter);
-    await service.stats();
-    expect(calls).toEqual(['/v2/certificate/count']);
+    await expect(service.stats()).resolves.toEqual({ total: 1, valid: 1, expiring: 0, expired: 0, revoked: 0, sources: ['manual'] });
+    expect(calls).toEqual(['list']);
   });
   it('does not proxy certificate reads through UCM v2', async () => {
     const adapter = {
@@ -45,5 +47,16 @@ describe('CertificatesService', () => {
     }));
     expect(result.data[0]).not.toHaveProperty('private_key');
     expect(result.data[0]).not.toHaveProperty('certificate_data');
+  });
+  it('computes v2-compatible status counts and normalized sources', async () => {
+    const service = new CertificatesService(async () => [
+      { serial_number: 'valid', valid_to: '2099-01-01T00:00:00Z', source: null },
+      { serial_number: 'expiring', valid_to: new Date(Date.now() + 10 * 86400000).toISOString(), source: 'ejbca' },
+      { serial_number: 'expired', valid_to: '2020-01-01T00:00:00Z', source: 'manual' },
+      { serial_number: 'revoked', valid_to: '2099-01-01T00:00:00Z', revoked: true, source: 'ejbca' },
+    ]);
+    await expect(service.stats()).resolves.toEqual({
+      total: 4, valid: 1, expiring: 1, expired: 1, revoked: 1, sources: ['ejbca', 'manual'],
+    });
   });
 });
