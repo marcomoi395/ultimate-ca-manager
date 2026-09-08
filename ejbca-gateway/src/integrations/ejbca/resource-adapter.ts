@@ -8,12 +8,19 @@ export class EjbcaResourceAdapter {
   listCertificates(query?: URLSearchParams): Promise<unknown> {
     const page = Number(query?.get('page') ?? '1');
     const limit = Number(query?.get('limit') ?? '100');
+    const criteria: Array<{ property: string; operation: string; value: string }> = [];
+    for (const status of query?.getAll('status') ?? []) criteria.push({ property: 'STATUS', operation: 'EQUAL', value: status });
+    for (const caId of query?.getAll('ca_id') ?? []) criteria.push({ property: 'CA_ID', operation: 'EQUAL', value: caId });
+    for (const source of query?.getAll('source') ?? []) criteria.push({ property: 'SOURCE', operation: 'EQUAL', value: source });
+    if (query?.get('search')) criteria.push({ property: 'SEARCH', operation: 'LIKE', value: query.get('search')! });
     return this.client.request('/v2/certificate/search', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
         pagination: { current_page: page, page_size: limit },
-        criteria: [{ property: 'STATUS', operation: 'EQUAL', value: 'CERT_ACTIVE' }],
+        criteria,
+        sort_by: query?.get('sort_by') ?? 'subject',
+        sort_order: query?.get('sort_order') ?? 'asc',
       }),
     });
   }

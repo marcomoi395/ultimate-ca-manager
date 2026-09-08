@@ -73,6 +73,14 @@ export class CertificatesService {
     const params = new URLSearchParams();
     params.set('page', String(query.page));
     params.set('limit', String(query.limit));
+    for (const status of query.status ?? []) params.append('status', status);
+    for (const caId of query.caId ?? []) params.append('ca_id', String(caId));
+    for (const source of query.source ?? []) params.append('source', source);
+    if (query.search) params.set('search', query.search);
+    if (query.hasKey !== undefined) params.set('has_key', String(query.hasKey));
+    if (query.templateModified !== undefined) params.set('template_modified', String(query.templateModified));
+    if (query.sortBy) params.set('sort_by', query.sortBy);
+    if (query.sortOrder) params.set('sort_order', query.sortOrder);
     return params;
   }
 

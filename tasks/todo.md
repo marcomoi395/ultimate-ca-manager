@@ -21,9 +21,9 @@
 
 ## Phase 2: Read paths
 
-- [ ] Task 3: Parse and forward complete list query semantics
+- [x] Task 3: Parse and forward complete list query semantics
   - Acceptance: repeated filters, per_page precedence, aliases, booleans, allow-listed sorting, complete adapter criteria.
-  - Verification: focused DTO and adapter tests plus invalid-query 400 tests.
+  - Verification: focused DTO and adapter tests, full gateway suite, and build.
   - Dependencies: Tasks 1–2
   - Complexity: Medium
 - [ ] Task 4: Deliver v3 list and detail endpoints end-to-end
