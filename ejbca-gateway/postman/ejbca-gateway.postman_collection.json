@@ -1,0 +1,127 @@
+{
+  "info": {
+    "name": "EJBCA Gateway API",
+    "description": "Generated from implemented NestJS controllers in ejbca-gateway. Global prefix: /api/v3.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "apikey",
+    "apikey": [
+      { "key": "key", "value": "x-api-key", "type": "string" },
+      { "key": "value", "value": "{{apiKey}}", "type": "string" },
+      { "key": "in", "value": "header", "type": "string" }
+    ]
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8081/api/v3", "type": "string" },
+    { "key": "apiKey", "value": "", "type": "string" },
+    { "key": "caId", "value": "1", "type": "string" },
+    { "key": "certificateId", "value": "1", "type": "string" },
+    { "key": "csrId", "value": "1", "type": "string" },
+    { "key": "templateId", "value": "1", "type": "string" },
+    { "key": "mscaId", "value": "1", "type": "string" },
+    { "key": "requestId", "value": "1", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Foundation",
+      "item": [
+        {
+          "name": "GET health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": { "type": "noauth" },
+            "url": { "raw": "{{baseUrl}}/health", "host": ["{{baseUrl}}"], "path": ["health"] }
+          }
+        },
+        {
+          "name": "GET contract metadata",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": { "type": "noauth" },
+            "url": { "raw": "{{baseUrl}}/meta/contract", "host": ["{{baseUrl}}"], "path": ["meta", "contract"] }
+          }
+        },
+        {
+          "name": "GET chain repair status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/system/chain-repair", "host": ["{{baseUrl}}"], "path": ["system", "chain-repair"] }
+          }
+        },
+        {
+          "name": "GET HSM status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/system/hsm-status", "host": ["{{baseUrl}}"], "path": ["system", "hsm-status"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Certificate Authorities",
+      "item": [
+        {
+          "name": "GET list CAs",
+          "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/cas", "host": ["{{baseUrl}}"], "path": ["cas"] } }
+        },
+        {
+          "name": "GET CA certificates",
+          "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/cas/{{caId}}/certificates", "host": ["{{baseUrl}}"], "path": ["cas", ":caId", "certificates"], "variable": [{ "key": "caId", "value": "{{caId}}" }] } }
+        },
+        {
+          "name": "GET CA details",
+          "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/cas/{{caId}}", "host": ["{{baseUrl}}"], "path": ["cas", ":caId"], "variable": [{ "key": "caId", "value": "{{caId}}" }] } }
+        },
+        {
+          "name": "GET CA templates",
+          "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/cas/{{caId}}/templates", "host": ["{{baseUrl}}"], "path": ["cas", ":caId", "templates"], "variable": [{ "key": "caId", "value": "{{caId}}" }] } }
+        }
+      ]
+    },
+    {
+      "name": "Certificates",
+      "item": [
+        { "name": "GET list certificates", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/certificates", "host": ["{{baseUrl}}"], "path": ["certificates"] } } },
+        { "name": "GET certificate stats", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/certificates/stats", "host": ["{{baseUrl}}"], "path": ["certificates", "stats"] } } },
+        { "name": "GET certificate compliance", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/certificates/compliance", "host": ["{{baseUrl}}"], "path": ["certificates", "compliance"] } } },
+        { "name": "GET certificate lint status", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/certificates/lint/status", "host": ["{{baseUrl}}"], "path": ["certificates", "lint", "status"] } } },
+        { "name": "GET certificate details", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/certificates/{{certificateId}}", "host": ["{{baseUrl}}"], "path": ["certificates", ":certificateId"], "variable": [{ "key": "certificateId", "value": "{{certificateId}}" }] } } },
+        { "name": "GET certificate lint", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/certificates/{{certificateId}}/lint", "host": ["{{baseUrl}}"], "path": ["certificates", ":certificateId", "lint"], "variable": [{ "key": "certificateId", "value": "{{certificateId}}" }] } } }
+      ]
+    },
+    {
+      "name": "CSRs",
+      "item": [
+        { "name": "GET list CSRs", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/csrs", "host": ["{{baseUrl}}"], "path": ["csrs"] } } },
+        { "name": "GET CSR history", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/csrs/history", "host": ["{{baseUrl}}"], "path": ["csrs", "history"] } } },
+        { "name": "GET CSR details", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/csrs/{{csrId}}", "host": ["{{baseUrl}}"], "path": ["csrs", ":csrId"], "variable": [{ "key": "csrId", "value": "{{csrId}}" }] } } }
+      ]
+    },
+    {
+      "name": "Templates",
+      "item": [
+        { "name": "GET list templates", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/templates", "host": ["{{baseUrl}}"], "path": ["templates"] } } },
+        { "name": "GET template details", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/templates/{{templateId}}", "host": ["{{baseUrl}}"], "path": ["templates", ":templateId"], "variable": [{ "key": "templateId", "value": "{{templateId}}" }] } } }
+      ]
+    },
+    {
+      "name": "Supporting",
+      "item": [
+        { "name": "GET known EKUs", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/eku/known", "host": ["{{baseUrl}}"], "path": ["eku", "known"] } } },
+        { "name": "GET HSM providers", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/hsm/providers", "host": ["{{baseUrl}}"], "path": ["hsm", "providers"] } } },
+        { "name": "GET HSM keys", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/hsm/keys", "host": ["{{baseUrl}}"], "path": ["hsm", "keys"] } } },
+        { "name": "POST analyze import", "request": { "method": "POST", "header": [], "url": { "raw": "{{baseUrl}}/import/analyze", "host": ["{{baseUrl}}"], "path": ["import", "analyze"] } } },
+        { "name": "POST execute import", "request": { "method": "POST", "header": [], "url": { "raw": "{{baseUrl}}/import/execute", "host": ["{{baseUrl}}"], "path": ["import", "execute"] } } },
+        { "name": "GET Microsoft CA enabled", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/microsoft-cas/enabled", "host": ["{{baseUrl}}"], "path": ["microsoft-cas", "enabled"] } } },
+        { "name": "GET pending Microsoft CA requests", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/microsoft-cas/requests/pending", "host": ["{{baseUrl}}"], "path": ["microsoft-cas", "requests", "pending"] } } },
+        { "name": "GET Microsoft CA templates", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/microsoft-cas/{{mscaId}}/templates", "host": ["{{baseUrl}}"], "path": ["microsoft-cas", ":mscaId", "templates"], "variable": [{ "key": "mscaId", "value": "{{mscaId}}" }] } } },
+        { "name": "GET Microsoft CA request", "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/microsoft-cas/{{mscaId}}/requests/{{requestId}}", "host": ["{{baseUrl}}"], "path": ["microsoft-cas", ":mscaId", "requests", ":requestId"], "variable": [{ "key": "mscaId", "value": "{{mscaId}}" }, { "key": "requestId", "value": "{{requestId}}" }] } } }
+      ]
+    }
+  ]
+}
