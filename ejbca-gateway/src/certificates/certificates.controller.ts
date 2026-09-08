@@ -12,10 +12,10 @@ export class CertificatesController {
   stats() { return this.service.stats(); }
 
   @Get('compliance')
-  compliance() { return this.service.compliance(); }
+  compliance() { return this.service.removed(); }
 
   @Get('lint/status')
-  lintStatus() { return this.service.lintStatus(); }
+  lintStatus() { return this.service.removed(); }
   @Get()
   @RequirePermission('read:certificates')
   list(@Query() query: CertificateListQueryInput) {
@@ -23,8 +23,8 @@ export class CertificatesController {
   }
 
   @Get(':id/lint')
-  lint(@Param('id') id: string, @Query('profile') _profile?: string) {
-    return this.service.lint(id);
+  lint(@Param('id') _id: string, @Query('profile') _profile?: string) {
+    return this.service.removed();
   }
   @Get(':id')
   @RequirePermission('read:certificates')
@@ -36,10 +36,10 @@ export class CertificatesController {
   create(@Body() _body: unknown) { return this.service.mutate(); }
 
   @Patch(':id')
-  rename(@Param('id') _id: string, @Body() _body: unknown) { return this.service.mutate(); }
+  rename(@Param('id') _id: string, @Body() _body: unknown) { return this.service.removed(); }
 
   @Post('import')
-  import(@Body() _body: unknown) { return this.service.mutate(); }
+  importCertificate(@Body() _body: unknown) { return this.service.mutate(); }
 
   @Post('export')
   exportAll(@Body() _body: unknown) { return this.service.exportFile(); }
@@ -48,7 +48,7 @@ export class CertificatesController {
   bulk(@Param('operation') _operation: string, @Body() _body: unknown) { return this.service.mutate(); }
 
   @Delete(':id')
-  remove(@Param('id') _id: string) { return this.service.mutate(); }
+  remove(@Param('id') _id: string) { return this.service.removed(); }
 
   @Post(':id/revoke')
   revoke(@Param('id') _id: string, @Body() _body: unknown) { return this.service.mutate(); }
@@ -63,8 +63,8 @@ export class CertificatesController {
   export(@Param('id') _id: string, @Body() _body: unknown) { return this.service.exportFile(); }
 
   @Post(':id/key')
-  uploadKey(@Param('id') _id: string, @Body() _body: unknown) { return this.service.mutate(); }
+  uploadKey(@Param('id') _id: string, @Body() _body: unknown) { return this.service.removed(); }
 
   @Post(':id/submit-ct')
-  submitToCt(@Param('id') _id: string) { return this.service.mutate(); }
+  submitToCt(@Param('id') _id: string) { return this.service.removed(); }
 }

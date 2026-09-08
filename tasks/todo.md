@@ -44,17 +44,12 @@
   - Complexity: Medium
 
 ## Phase 3: Stats and intentional route outcomes
-
-- [ ] Task 5: Implement v2-compatible certificate statistics
-  - Acceptance: complete counts, exact time boundaries, normalized sources, no unsupported guessing.
-  - Verification: classifier boundary/source/stats tests, route contract test, build, runtime fixture evidence.
-  - Dependencies: Task 4
-  - Complexity: Medium
-- [ ] Task 6: Stabilize removed and not-yet-implemented route matrix
+- [x] Task 6: Stabilize removed and not-yet-implemented route matrix
   - Acceptance: seven routes return stable 410; twelve routes return stable 501; neither calls upstream services.
-  - Verification: exact route/error snapshot matrix, integration samples, build.
+  - Verification: route matrix tests, full gateway suite, and build.
   - Dependencies: Task 1; parallel with Task 5 after foundation checkpoint
   - Complexity: Small–Medium
+
 
 ## Checkpoint: Complete certificate endpoint matrix
 

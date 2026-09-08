@@ -1,4 +1,4 @@
-import { ConflictException, Inject, Injectable, NotFoundException, NotImplementedException } from '@nestjs/common';
+import { ConflictException, GoneException, Inject, Injectable, NotFoundException, NotImplementedException } from '@nestjs/common';
 import { EjbcaResourceAdapter } from '../integrations/ejbca/resource-adapter';
 import { mapCertificatePublicData } from './public-mapper';
 import type { CertificateListQuery } from './dtos/certificate-list.query';
@@ -66,13 +66,13 @@ export class CertificatesService {
     return { total: records.length, valid, expiring, expired, revoked, sources: [...sources].sort() };
   }
 
-  compliance(): Promise<never> {
-    throw new NotImplementedException('EJBCA does not provide UCM compliance statistics');
+  removed(): Promise<never> {
+    throw new GoneException('GATEWAY_ENDPOINT_REMOVED');
   }
 
-  lintStatus(): Promise<never> {
-    throw new NotImplementedException('Certificate linting is not an EJBCA REST operation');
-  }
+  compliance(): Promise<never> { return this.removed(); }
+
+  lintStatus(): Promise<never> { return this.removed(); }
   async getById(id: string): Promise<unknown> {
     const result = this.reader
       ? await this.reader({ page: 1, limit: 100 })
@@ -93,9 +93,7 @@ export class CertificatesService {
     throw new NotImplementedException('Certificate export through the EJBCA adapter is not implemented');
   }
 
-  lint(_id?: string, _profile?: string): Promise<never> {
-    throw new NotImplementedException('Certificate linting is not an EJBCA REST operation');
-  }
+  lint(_id?: string, _profile?: string): Promise<never> { return this.removed(); }
 
   private toEjbcaSearchQuery(query: CertificateListQuery): URLSearchParams {
     const params = new URLSearchParams();
