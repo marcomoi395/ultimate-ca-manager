@@ -34,7 +34,7 @@ export class EjbcaHttpClient {
 
     for (let attempt = 0; attempt < attempts; attempt += 1) {
       try {
-        response = await this.fetcher(new URL(path, this.config.baseUrl), {
+        response = await this.fetcher(new URL(path.replace(/^\/+/, ''), `${this.config.baseUrl.replace(/\/$/, '')}/`), {
           ...init,
           method,
           headers: { accept: 'application/json', ...init.headers },
@@ -58,6 +58,10 @@ export class EjbcaHttpClient {
   private async parseBody(response: Response): Promise<unknown> {
     const text = await response.text();
     if (!text) return null;
+    const contentType = response.headers.get('content-type') ?? '';
+    if (contentType.includes('text/html') || /^\s*<!doctype html/i.test(text) || /^\s*<html/i.test(text)) {
+      throw normalizeEjbcaError(502, { message: 'EJBCA returned HTML instead of JSON' });
+    }
     try {
       return JSON.parse(text) as unknown;
     } catch {
