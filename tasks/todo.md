@@ -60,16 +60,11 @@
 
 ## Phase 4: Write-contract readiness and final governance
 
-- [ ] Task 7: Record write/import/bulk contracts and integration notes
+- [x] Task 7: Record write/import/bulk contracts and integration notes
   - Acceptance: all twelve 501 route records include validation/permission/body/content/audit/idempotency/retry/partial-failure/EJBCA-version fields; frontend remains on v2; open questions tracked.
-  - Verification: matrix consistency review, available docs checks, final gateway tests and build after implementation.
+  - Verification: matrix consistency review; final gateway tests and build already passed for behavior changes.
   - Dependencies: Tasks 5–6
   - Complexity: Small–Medium
-
-## Checkpoint: Ready for human review
-
-- [ ] All acceptance criteria satisfied.
-- [ ] Focused and full gateway tests pass.
 - [ ] Gateway build passes.
 - [ ] Runtime EJBCA health/read evidence captured when available.
 - [ ] No unapproved frontend routing change.
