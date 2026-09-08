@@ -2,9 +2,11 @@ import { describe, expect, it } from 'bun:test';
 import { EjbcaResourceAdapter } from '../src/integrations/ejbca/resource-adapter';
 
 describe('EJBCA resource adapter', () => {
-  it('maps certificate and CA resource calls to typed methods', async () => {
-    const adapter = new EjbcaResourceAdapter({ request: async (path) => ({ path }) });
-    expect(await adapter.listCertificates()).toEqual({ path: '/certificates' });
-    expect(await adapter.getCa('ca-1')).toEqual({ path: '/cas/ca-1' });
+  it('maps gateway resources to EJBCA v1 paths', async () => {
+    const paths: string[] = [];
+    const adapter = new EjbcaResourceAdapter({ request: async (path) => { paths.push(path); return { path }; } });
+    await adapter.listCertificates();
+    await adapter.getCa('ca-1');
+    expect(paths).toEqual(['/v1/certificate', '/v1/ca/ca-1']);
   });
 });
