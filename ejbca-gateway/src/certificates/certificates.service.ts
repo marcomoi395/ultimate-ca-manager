@@ -1,5 +1,6 @@
 import { Inject, Injectable, NotFoundException, NotImplementedException } from '@nestjs/common';
 import { EjbcaResourceAdapter } from '../integrations/ejbca/resource-adapter';
+import { mapCertificatePublicData } from './public-mapper';
 import type { CertificateListQuery } from './dtos/certificate-list.query';
 
 type CertificateReader = (query: CertificateListQuery) => Promise<unknown>;
@@ -24,7 +25,7 @@ export class CertificatesService {
     const result = this.reader
       ? await this.reader(query)
       : await this.adapter!.listCertificates(this.toEjbcaSearchQuery(query));
-    const certificates = this.extractCertificates(result);
+    const certificates = this.extractCertificates(result).map(mapCertificatePublicData);
     return {
       data: certificates,
       meta: {
@@ -46,12 +47,11 @@ export class CertificatesService {
   lintStatus(): Promise<never> {
     throw new NotImplementedException('Certificate linting is not an EJBCA REST operation');
   }
-
   async getById(id: string): Promise<unknown> {
     const result = this.reader
       ? await this.reader({ page: 1, limit: 100 })
       : await this.adapter!.getCertificate(id);
-    const certificates = this.extractCertificates(result);
+    const certificates = this.extractCertificates(result).map(mapCertificatePublicData);
     const match = certificates.find((certificate) => certificate.serial_number === id || certificate.id === id);
     if (!match) throw new NotFoundException(`Certificate ${id} not found`);
     return match;

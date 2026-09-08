@@ -25,7 +25,7 @@ describe('endpoint response contracts', () => {
       new EnvelopeInterceptor().intercept(envelopeContext(), { handle: () => of(raw) } as never),
     );
     expect(result).toEqual({
-      data: [{ id: 'cert-1' }],
+      data: [{ id: 'cert-1', serial_number: 'cert-1', subject: null, issuer: null, status: 'valid', has_private_key: false }],
       message: 'ok',
       meta: { page: 1, per_page: 20, total: 1 },
     });

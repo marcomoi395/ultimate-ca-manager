@@ -21,8 +21,29 @@ describe('CertificatesService', () => {
     } as never;
     const service = new CertificatesService(adapter);
     await expect(service.list({ page: 1, limit: 25 })).resolves.toEqual({
-      data: [{ id: 'cert-1' }],
+      data: [{ id: 'cert-1', serial_number: 'cert-1', subject: null, issuer: null, status: 'valid', has_private_key: false }],
       meta: { page: 1, per_page: 25, total: 1 },
     });
+  });
+  it('maps EJBCA records to a safe v2-compatible public shape', async () => {
+    const service = new CertificatesService(async () => [{
+      serial_number: '00af12',
+      subject_dn: 'CN=example.com',
+      issuer_dn: 'CN=Example CA',
+      status: 'CERT_ACTIVE',
+      certificate_data: 'PRIVATE-RAW-CERT',
+      private_key: 'PRIVATE-KEY',
+    }]);
+    const result = await service.list({ page: 1, limit: 10 });
+    expect(result.data[0]).toEqual(expect.objectContaining({
+      id: '00af12',
+      serial_number: '00af12',
+      subject: 'CN=example.com',
+      issuer: 'CN=Example CA',
+      status: 'valid',
+      has_private_key: false,
+    }));
+    expect(result.data[0]).not.toHaveProperty('private_key');
+    expect(result.data[0]).not.toHaveProperty('certificate_data');
   });
 });

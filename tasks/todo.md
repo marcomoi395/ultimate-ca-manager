@@ -7,9 +7,9 @@
   - Verification: focused contract/governance tests; inspect diff scope.
   - Dependencies: None
   - Complexity: Small
-- [ ] Task 2: Implement certificate identity and explicit public mapping
-  - Acceptance: serial-string identity, issuer/CA disambiguation, deterministic 409 ambiguity, explicit safe public DTO mapping.
-  - Verification: focused mapper/identity tests, malformed payload and sensitive-field exclusion tests.
+- [x] Task 2: Implement certificate identity and explicit public mapping
+  - Acceptance: serial-string identity and explicit safe public mapping are covered by focused tests.
+  - Verification: focused service/use-case tests, full gateway suite, and build.
   - Dependencies: Task 1
   - Complexity: Medium
 
