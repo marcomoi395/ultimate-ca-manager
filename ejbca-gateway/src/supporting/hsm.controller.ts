@@ -1,18 +1,17 @@
-import { Controller, Get } from '@nestjs/common';
-import type { V3SuccessEnvelope } from '../common/contracts';
-import { EjbcaResourceAdapter } from '../integrations/ejbca/resource-adapter';
+import { Controller, Get } from "@nestjs/common";
+import { HsmService } from "./hsm.service";
 
-function ok<T>(data: T): V3SuccessEnvelope<T> {
-  return { data, message: 'ok', meta: {} };
-}
-
-@Controller('hsm')
+@Controller("hsm")
 export class HsmController {
-  constructor(private readonly adapter: EjbcaResourceAdapter) {}
+  constructor(private readonly service: HsmService) {}
 
-  @Get('providers')
-  providers() { return this.adapter.request('/v1/cryptotoken').then(ok); }
+  @Get("providers")
+  providers() {
+    return this.service.providers();
+  }
 
-  @Get('keys')
-  keys() { return this.adapter.request('/v1/cryptotoken/keypair').then(ok); }
+  @Get("keys")
+  keys() {
+    return this.service.keys();
+  }
 }

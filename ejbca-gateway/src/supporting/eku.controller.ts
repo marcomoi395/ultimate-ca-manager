@@ -1,15 +1,13 @@
 import { Controller, Get } from '@nestjs/common';
-import type { V3SuccessEnvelope } from '../common/contracts';
-import { EjbcaResourceAdapter } from '../integrations/ejbca/resource-adapter';
+import { CatalogService } from './catalog.service';
 
-function ok<T>(data: T): V3SuccessEnvelope<T> {
-  return { data, message: 'ok', meta: {} };
-}
-
+// TODO(v3): EJBCA REST does not expose an EKU catalog; this mirrors the UCM
+// backend catalog (backend/utils/cert_extensions.py EKU_NAMES). Replace with
+// an upstream source when EJBCA provides one.
 @Controller('eku')
 export class EkuController {
-  constructor(private readonly adapter: EjbcaResourceAdapter) {}
+  constructor(private readonly catalog: CatalogService) {}
 
   @Get('known')
-  known() { return this.adapter.request('/v1/ca').then(ok); }
+  known() { return this.catalog.knownEku(); }
 }

@@ -4,10 +4,11 @@ import { HsmService } from '../src/supporting/hsm.service';
 
 describe('supporting services', () => {
   it('blocks import execution until a side-effect adapter is configured', async () => {
-    expect((await new ImportService().execute({})).data.status).toBe('blocked');
+    const result = await new ImportService().execute({});
+    expect(result.data.status).toBe('blocked');
   });
 
   it('returns metadata-only HSM discovery data', async () => {
-    expect((await new HsmService().providers()).data).toEqual([]);
+    expect(await new HsmService().providers()).toEqual([]);
   });
 });
