@@ -1,5 +1,6 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Param } from '@nestjs/common';
 import type { V3SuccessEnvelope } from '../common/contracts';
+import { TemplatesService } from './templates.service';
 
 function ok<T>(data: T): V3SuccessEnvelope<T> {
   return { data, message: 'ok', meta: {} };
@@ -7,6 +8,11 @@ function ok<T>(data: T): V3SuccessEnvelope<T> {
 
 @Controller('templates')
 export class TemplatesController {
-  @Get() list() { return ok([]); }
-  @Get(':id') detail() { return ok({ usageCount: 0 }); }
+  constructor(private readonly service: TemplatesService) {}
+
+  @Get()
+  list() { return this.service.list().then(ok); }
+
+  @Get(':id')
+  detail(@Param('id') id: string) { return this.service.getById(id).then(ok); }
 }

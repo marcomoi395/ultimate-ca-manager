@@ -1,5 +1,6 @@
-import { Controller, Post } from '@nestjs/common';
+import { Body, Controller, Post } from '@nestjs/common';
 import type { V3SuccessEnvelope } from '../common/contracts';
+import { EjbcaResourceAdapter } from '../integrations/ejbca/resource-adapter';
 
 function ok<T>(data: T): V3SuccessEnvelope<T> {
   return { data, message: 'ok', meta: {} };
@@ -7,6 +8,23 @@ function ok<T>(data: T): V3SuccessEnvelope<T> {
 
 @Controller('import')
 export class ImportController {
-  @Post('analyze') analyze() { return ok({ status: 'analyzed' }); }
-  @Post('execute') execute() { return ok({ status: 'blocked' }); }
+  constructor(private readonly adapter: EjbcaResourceAdapter) {}
+
+  @Post('analyze')
+  analyze(@Body() body: unknown) {
+    return this.adapter.request('/v1/configdump', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body ?? {}),
+    }).then(ok);
+  }
+
+  @Post('execute')
+  execute(@Body() body: unknown) {
+    return this.adapter.request('/v1/configdump', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body ?? {}),
+    }).then(ok);
+  }
 }

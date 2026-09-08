@@ -1,10 +1,15 @@
+import { Injectable } from '@nestjs/common';
+import { EjbcaResourceAdapter } from '../integrations/ejbca/resource-adapter';
+
+@Injectable()
 export class TemplatesService {
-  async list(): Promise<{ data: readonly unknown[] }> {
-    return { data: [] };
+  constructor(private readonly adapter: EjbcaResourceAdapter) {}
+
+  list(): Promise<unknown> {
+    return this.adapter.listTemplates();
   }
 
-  async getById(id: string): Promise<{ status: 'MISSING' }> {
-    void id;
-    return { status: 'MISSING' };
+  getById(id: string): Promise<unknown> {
+    return this.adapter.request(`/v1/endentity/${encodeURIComponent(id)}`);
   }
 }
