@@ -15,9 +15,9 @@
 - [ ] Failed hard gate blocks Phase 2
 
 ## Phase 2: Independent Vertical Write Slices
-- [ ] Task 4: Implement certificate issue flow
-- [ ] Task 5: Implement certificate revoke flow
-- [ ] Task 6: Implement certificate unhold flow
+- [x] Task 4: Implement certificate issue flow
+- [x] Task 5: Implement certificate revoke flow
+- [x] Task 6: Implement certificate unhold flow
 
 ## Checkpoint: Write Flows
 - [ ] All three required routes pass focused tests
