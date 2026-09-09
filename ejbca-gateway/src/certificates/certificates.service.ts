@@ -24,14 +24,16 @@ export class CertificatesService {
   async list(query: CertificateListQuery): Promise<CertificateReadResult> {
     const result = this.reader
       ? await this.reader(query)
-      : await this.adapter!.listCertificates(this.toEjbcaSearchQuery(query));
-    const certificates = this.extractCertificates(result).map(mapCertificatePublicData);
+      : await this.readForQuery(query);
+    let certificates = this.extractCertificates(result).map(mapCertificatePublicData);
+    if (query.status?.length) certificates = certificates.filter((certificate) => query.status!.includes(certificate.status));
+    const offset = (query.page - 1) * query.limit;
     return {
-      data: certificates,
+      data: certificates.slice(offset, offset + query.limit),
       meta: {
         page: query.page,
         per_page: query.limit,
-        total: this.extractTotal(result, certificates.length),
+        total: this.reader ? this.extractTotal(result, certificates.length) : certificates.length,
       },
     };
   }
@@ -108,6 +110,17 @@ export class CertificatesService {
     if (query.sortBy) params.set('sort_by', query.sortBy);
     if (query.sortOrder) params.set('sort_order', query.sortOrder);
     return params;
+  }
+
+  private async readForQuery(query: CertificateListQuery): Promise<unknown> {
+    const statuses = query.status ?? [];
+    const nativeStatuses = statuses
+      .map((status) => status === 'valid' || status === 'expiring' || status === 'expired' ? 'CERT_ACTIVE' : status === 'revoked' ? 'CERT_REVOKED' : status)
+      .filter((status, index, all) => all.indexOf(status) === index);
+    const base = { ...query, page: 1, limit: nativeStatuses.length > 1 ? 100 : query.limit };
+    if (nativeStatuses.length <= 1) return this.adapter!.listCertificates(this.toEjbcaSearchQuery({ ...base, status: nativeStatuses }));
+    const results = await Promise.all(nativeStatuses.map((status) => this.adapter!.listCertificates(this.toEjbcaSearchQuery({ ...base, status: [status] }))));
+    return { certificates: results.flatMap((result) => this.extractCertificates(result)) };
   }
 
   private extractCertificates(result: unknown): Record<string, unknown>[] {

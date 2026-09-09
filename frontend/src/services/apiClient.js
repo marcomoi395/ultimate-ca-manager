@@ -84,7 +84,7 @@ class APIClient {
     if (import.meta.env.DEV && options.params) {
       console.warn(`⚠️ apiClient does not support 'params'. Use buildQueryString() to append query params to the URL. Called on: ${endpoint}`)
     }
-    const url = `${this.baseURL}${endpoint}`
+    const url = `${options.apiVersion === 'v3' ? '/api/v3' : this.baseURL}${endpoint}`
     
     const headers = {
       'Content-Type': 'application/json',

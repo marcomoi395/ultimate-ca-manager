@@ -1608,7 +1608,7 @@ def init_database(app):
 
 def register_blueprints(app):
     """Register all API blueprints"""
-    # Import UI and public routes
+    from api.v3_proxy import v3_proxy_bp
     from api.ui_routes import ui_bp
     from api.cdp_routes import cdp_bp
     from api.aia_routes import aia_bp
@@ -1619,7 +1619,7 @@ def register_blueprints(app):
     
     # Register internal auth before the UI catch-all.
     app.register_blueprint(internal_auth_bp)
-
+    app.register_blueprint(v3_proxy_bp)
     # Register Unified API v2.0 FIRST (routes already have /api/* prefix)
     # This must be before ui_bp which has catch-all routing
     from api.v2 import register_api_v2

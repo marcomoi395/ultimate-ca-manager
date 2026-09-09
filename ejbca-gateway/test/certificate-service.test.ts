@@ -17,6 +17,25 @@ describe('CertificatesService', () => {
     await expect(service.stats()).resolves.toEqual({ total: 1, valid: 1, expiring: 0, expired: 0, revoked: 0, sources: ['manual'] });
     expect(calls).toEqual(['list']);
   });
+
+  it('maps frontend statuses to EJBCA statuses and filters normalized results', async () => {
+    const calls: URLSearchParams[] = [];
+    const adapter = {
+      listCertificates: async (query: URLSearchParams) => {
+        calls.push(query);
+        return query.get('status') === 'CERT_REVOKED'
+          ? { certificates: [{ serial_number: 'revoked', status: 'CERT_REVOKED', revoked: true, valid_to: '2099-01-01T00:00:00Z' }] }
+          : { certificates: [
+            { serial_number: 'valid', status: 'CERT_ACTIVE', valid_to: '2099-01-01T00:00:00Z' },
+            { serial_number: 'expiring', status: 'CERT_ACTIVE', valid_to: new Date(Date.now() + 10 * 86400000).toISOString() },
+          ] };
+      },
+    } as never;
+    const service = new CertificatesService(adapter);
+    const result = await service.list({ page: 1, limit: 25, status: ['expiring', 'valid', 'revoked'] });
+    expect(result.data.map((certificate) => certificate.status)).toEqual(['valid', 'expiring', 'revoked']);
+    expect(calls.map((query) => query.get('status'))).toEqual(['CERT_ACTIVE', 'CERT_REVOKED']);
+  });
   it('does not proxy certificate reads through UCM v2', async () => {
     const adapter = {
       listCertificates: async () => ({ certificates: [{ id: 'cert-1' }] }),

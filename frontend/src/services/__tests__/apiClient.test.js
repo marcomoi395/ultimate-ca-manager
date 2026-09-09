@@ -44,6 +44,20 @@ describe('API Client', () => {
     )
   })
 
+  it('makes v3 GET request when requested', async () => {
+    const mockResponse = {
+      ok: true,
+      headers: new Headers({ 'content-type': 'application/json' }),
+      json: () => Promise.resolve({ data: [] })
+    }
+    global.fetch.mockResolvedValueOnce(mockResponse)
+
+    const { apiClient } = await import('../apiClient')
+    await apiClient.get('/certificates', { apiVersion: 'v3' })
+
+    expect(global.fetch).toHaveBeenCalledWith('/api/v3/certificates', expect.any(Object))
+  })
+
   it('makes POST request with body', async () => {
     const mockResponse = {
       ok: true,

@@ -57,9 +57,9 @@ services:
       # Disable backups for development
       - UCM_BACKUP_ENABLED=false
       
-      # Verbose SQL logging
       - SQL_DEBUG=false  # Set true if needed (very verbose!)
       - UCM_INTERNAL_AUTH_SECRET=${UCM_INTERNAL_AUTH_SECRET:-change-me-in-development}
+      - EJBCA_GATEWAY_URL=${EJBCA_GATEWAY_URL:-http://ejbca-gateway:8081}
       
       # Test SMTP (use Mailhog or similar)
       - UCM_SMTP_ENABLED=false

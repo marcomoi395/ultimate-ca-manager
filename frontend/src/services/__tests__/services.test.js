@@ -154,22 +154,23 @@ describe('certificatesService', () => {
     certificatesService = mod.certificatesService
   })
 
-  it('getAll → GET /certificates with filters', async () => {
+  it('getAll → GET /certificates through v3 gateway', async () => {
     await certificatesService.getAll({ status: 'valid', ca_id: 1 })
     const call = mockApiClient.get.mock.calls[0]
     expect(call[0]).toContain('/certificates')
     expect(call[0]).toContain('status=valid')
     expect(call[0]).toContain('ca_id=1')
+    expect(call[1]).toEqual({ apiVersion: 'v3' })
   })
 
-  it('getStats → GET /certificates/stats', async () => {
+  it('getStats → GET /certificates/stats through v3 gateway', async () => {
     await certificatesService.getStats()
-    expect(mockApiClient.get).toHaveBeenCalledWith('/certificates/stats')
+    expect(mockApiClient.get).toHaveBeenCalledWith('/certificates/stats', { apiVersion: 'v3' })
   })
 
-  it('getById → GET /certificates/:id', async () => {
+  it('getById → GET /certificates/:id through v3 gateway', async () => {
     await certificatesService.getById(42)
-    expect(mockApiClient.get).toHaveBeenCalledWith('/certificates/42')
+    expect(mockApiClient.get).toHaveBeenCalledWith('/certificates/42', { apiVersion: 'v3' })
   })
 
   it('create → POST /certificates', async () => {

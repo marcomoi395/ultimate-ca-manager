@@ -145,9 +145,6 @@ export default function CertificatesPage() {
         sort_by: sortBy,
         sort_order: sortOrder
       }
-      if (filterStatus.length > 0 && !filterStatus.includes('orphan')) {
-        params.status = filterStatus
-      }
       if (filterCA.length > 0) {
         params.ca_id = filterCA
       }
@@ -358,10 +355,10 @@ export default function CertificatesPage() {
       isOrphan: cert.caref && !caRefIds.has(cert.caref)
     }))
     
-    if (filterStatus.length > 0) {
-      result = result.filter(c => filterStatus.includes(c.status))
+    if (filterStatus.includes('orphan')) {
+      result = result.filter(c => c.isOrphan)
     }
-    
+
     return result
   }, [certificates, cas, filterStatus, filterCA])
 
@@ -375,10 +372,10 @@ export default function CertificatesPage() {
   // Each stat is clickable to filter the table
   const stats = useMemo(() => {
     const baseStats = [
-      { icon: CheckCircle, label: t('common.valid'), value: certStats.valid, variant: 'success', filterValue: 'valid' },
-      { icon: Warning, label: t('common.expiring'), shortLabel: t('common.expiring').substring(0, 3) + '.', value: certStats.expiring, variant: 'warning', filterValue: 'expiring' },
-      { icon: Clock, label: t('common.expired'), value: certStats.expired, variant: 'neutral', filterValue: 'expired' },
-      { icon: X, label: t('common.revoked'), shortLabel: t('common.revoked').substring(0, 3) + '.', value: certStats.revoked, variant: 'danger', filterValue: 'revoked' }
+      { icon: CheckCircle, label: t('common.valid'), value: certStats.valid, variant: 'success', filterValue: 'valid', disabled: true },
+      { icon: Warning, label: t('common.expiring'), shortLabel: t('common.expiring').substring(0, 3) + '.', value: certStats.expiring, variant: 'warning', filterValue: 'expiring', disabled: true },
+      { icon: Clock, label: t('common.expired'), value: certStats.expired, variant: 'neutral', filterValue: 'expired', disabled: true },
+      { icon: X, label: t('common.revoked'), shortLabel: t('common.revoked').substring(0, 3) + '.', value: certStats.revoked, variant: 'danger', filterValue: 'revoked', disabled: true }
     ]
     // Add orphan stat if there are any
     if (orphanCount > 0) {
@@ -388,16 +385,14 @@ export default function CertificatesPage() {
     return baseStats
   }, [certStats, orphanCount, t])
   
-  // Handle stat click to filter
   const handleStatClick = useCallback((filterValue) => {
-    setPage(1) // Reset to first page when filtering
+    if (['valid', 'expiring', 'expired', 'revoked'].includes(filterValue)) return
+    setPage(1)
     if (filterValue === '') {
-      setFilterStatus([]) // "Total" clears all
+      setFilterStatus([])
     } else {
       setFilterStatus(prev => {
-        if (prev.includes(filterValue)) {
-          return prev.filter(v => v !== filterValue)
-        }
+        if (prev.includes(filterValue)) return prev.filter(v => v !== filterValue)
         return [...prev, filterValue]
       })
     }
@@ -471,8 +466,9 @@ export default function CertificatesPage() {
       key: 'status',
       label: t('common.status'),
       type: 'multiSelect',
-      value: filterStatus,
-      onChange: (val) => { setPage(1); setFilterStatus(val) },
+      value: [],
+      disabled: true,
+      onChange: () => {},
       placeholder: t('common.allStatus'),
       options: [
         { value: 'valid', label: t('common.valid') },

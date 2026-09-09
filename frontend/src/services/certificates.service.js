@@ -5,15 +5,15 @@ import { apiClient, buildQueryString } from './apiClient'
 
 export const certificatesService = {
   async getAll(filters = {}) {
-    return apiClient.get(`/certificates${buildQueryString(filters)}`)
+    return apiClient.get(`/certificates${buildQueryString(filters)}`, { apiVersion: 'v3' })
   },
 
   async getStats() {
-    return apiClient.get('/certificates/stats')
+    return apiClient.get('/certificates/stats', { apiVersion: 'v3' })
   },
 
   async getById(id) {
-    return apiClient.get(`/certificates/${id}`)
+    return apiClient.get(`/certificates/${id}`, { apiVersion: 'v3' })
   },
 
   async create(data) {
