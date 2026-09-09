@@ -317,42 +317,157 @@
           }
         },
         {
-          "name": "POST create certificate (501)",
+          "name": "POST issue certificate",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }],
-            "body": { "mode": "raw", "raw": "{\n  \"cn\": \"example.com\",\n  \"ca_id\": \"ca-1\"\n}", "options": { "raw": { "language": "json" } } },
-            "url": { "raw": "{{baseUrl}}/certificates", "host": ["{{baseUrl}}"], "path": ["certificates"] },
-            "description": "Current contract: 501 Not Implemented. Intended for certificate issuance."
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/certificates",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "certificates"
+              ],
+              "variable": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"certificate_request\": \"{{csrBase64}}\",\n  \"certificate_profile_name\": \"{{certificateProfile}}\",\n  \"end_entity_profile_name\": \"{{endEntityProfile}}\",\n  \"certificate_authority_name\": \"{{caName}}\",\n  \"username\": \"{{ejbcaUsername}}\",\n  \"password\": \"{{ejbcaPassword}}\",\n  \"include_chain\": true,\n  \"response_format\": \"DER\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Issues through verified EJBCA enrollment. Do not commit secrets."
           }
         },
         {
           "name": "PATCH rename certificate (410)",
           "request": {
             "method": "PATCH",
-            "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }],
-            "body": { "mode": "raw", "raw": "{\n  \"descr\": \"example.com certificate\"\n}", "options": { "raw": { "language": "json" } } },
-            "url": { "raw": "{{baseUrl}}/certificates/{{certificateId}}", "host": ["{{baseUrl}}"], "path": ["certificates", ":certificateId"], "variable": [{ "key": "certificateId", "value": "{{certificateId}}" }] },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"descr\": \"example.com certificate\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/certificates/{{certificateId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "certificates",
+                ":certificateId"
+              ],
+              "variable": [
+                {
+                  "key": "certificateId",
+                  "value": "{{certificateId}}"
+                }
+              ]
+            },
             "description": "Current contract: 410 Gone. UCM metadata operation, not EJBCA passthrough."
           }
         },
         {
-          "name": "POST revoke certificate (501)",
+          "name": "POST revoke certificate",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }],
-            "body": { "mode": "raw", "raw": "{\n  \"reason\": \"cessation\"\n}", "options": { "raw": { "language": "json" } } },
-            "url": { "raw": "{{baseUrl}}/certificates/{{certificateId}}/revoke", "host": ["{{baseUrl}}"], "path": ["certificates", ":certificateId", "revoke"], "variable": [{ "key": "certificateId", "value": "{{certificateId}}" }] },
-            "description": "Current contract: 501 Not Implemented. Intended for revocation."
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/certificates/{{certificateId}}/revoke",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "certificates",
+                "{{certificateId}}",
+                "revoke"
+              ],
+              "variable": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"issuer\": \"{{issuerDn}}\",\n  \"reason\": \"CERTIFICATE_HOLD\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Revokes through EJBCA. Idempotency-Key enables replay protection."
           }
         },
         {
-          "name": "POST unhold certificate (501)",
+          "name": "POST unhold certificate",
           "request": {
             "method": "POST",
-            "header": [],
-            "url": { "raw": "{{baseUrl}}/certificates/{{certificateId}}/unhold", "host": ["{{baseUrl}}"], "path": ["certificates", ":certificateId", "unhold"], "variable": [{ "key": "certificateId", "value": "{{certificateId}}" }] },
-            "description": "Current contract: 501 Not Implemented. Intended to remove a certificate hold."
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/certificates/{{certificateId}}/unhold",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "certificates",
+                "{{certificateId}}",
+                "unhold"
+              ],
+              "variable": [],
+              "query": [
+                {
+                  "key": "issuer",
+                  "value": "{{issuerDn}}"
+                }
+              ]
+            },
+            "description": "Removes hold through EJBCA using REMOVE_FROM_CRL."
           }
         },
         {
@@ -360,7 +475,23 @@
           "request": {
             "method": "POST",
             "header": [],
-            "url": { "raw": "{{baseUrl}}/certificates/{{certificateId}}/renew", "host": ["{{baseUrl}}"], "path": ["certificates", ":certificateId", "renew"], "variable": [{ "key": "certificateId", "value": "{{certificateId}}" }] },
+            "url": {
+              "raw": "{{baseUrl}}/certificates/{{certificateId}}/renew",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "certificates",
+                ":certificateId",
+                "renew"
+              ],
+              "variable": [
+                {
+                  "key": "certificateId",
+                  "value": "{{certificateId}}"
+                }
+              ]
+            },
             "description": "Current contract: 501 Not Implemented. Intended for certificate renewal."
           }
         },
@@ -368,9 +499,39 @@
           "name": "POST export certificate (501)",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }],
-            "body": { "mode": "raw", "raw": "{\n  \"format\": \"pem\"\n}", "options": { "raw": { "language": "json" } } },
-            "url": { "raw": "{{baseUrl}}/certificates/{{certificateId}}/export", "host": ["{{baseUrl}}"], "path": ["certificates", ":certificateId", "export"], "variable": [{ "key": "certificateId", "value": "{{certificateId}}" }] },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"format\": \"pem\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/certificates/{{certificateId}}/export",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "certificates",
+                ":certificateId",
+                "export"
+              ],
+              "variable": [
+                {
+                  "key": "certificateId",
+                  "value": "{{certificateId}}"
+                }
+              ]
+            },
             "description": "Current contract: 501 Not Implemented. Intended for single-certificate export."
           }
         },
@@ -378,9 +539,32 @@
           "name": "POST export certificates (501)",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }],
-            "body": { "mode": "raw", "raw": "{\n  \"format\": \"pem\"\n}", "options": { "raw": { "language": "json" } } },
-            "url": { "raw": "{{baseUrl}}/certificates/export", "host": ["{{baseUrl}}"], "path": ["certificates", "export"] },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"format\": \"pem\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/certificates/export",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "certificates",
+                "export"
+              ]
+            },
             "description": "Current contract: 501 Not Implemented. Intended for multi-certificate export."
           }
         },
@@ -389,8 +573,26 @@
           "request": {
             "method": "POST",
             "header": [],
-            "body": { "mode": "formdata", "formdata": [{ "key": "file", "type": "file", "src": "" }] },
-            "url": { "raw": "{{baseUrl}}/certificates/import", "host": ["{{baseUrl}}"], "path": ["certificates", "import"] },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": ""
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/certificates/import",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "certificates",
+                "import"
+              ]
+            },
             "description": "Current contract: 501 Not Implemented. Intended for certificate import."
           }
         },
@@ -398,9 +600,39 @@
           "name": "POST bulk operation (501)",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }],
-            "body": { "mode": "raw", "raw": "{\n  \"ids\": [\"{{certificateId}}\"]\n}", "options": { "raw": { "language": "json" } } },
-            "url": { "raw": "{{baseUrl}}/certificates/bulk/{{bulkOperation}}", "host": ["{{baseUrl}}"], "path": ["certificates", "bulk", ":bulkOperation"], "variable": [{ "key": "bulkOperation", "value": "revoke" }] },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ids\": [\"{{certificateId}}\"]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/certificates/bulk/{{bulkOperation}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "certificates",
+                "bulk",
+                ":bulkOperation"
+              ],
+              "variable": [
+                {
+                  "key": "bulkOperation",
+                  "value": "revoke"
+                }
+              ]
+            },
             "description": "Current contract: 501 Not Implemented. Generic bulk operation contract."
           }
         },
@@ -408,9 +640,33 @@
           "name": "POST bulk revoke (501)",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }],
-            "body": { "mode": "raw", "raw": "{\n  \"ids\": [\"{{certificateId}}\"],\n  \"reason\": \"cessation\"\n}", "options": { "raw": { "language": "json" } } },
-            "url": { "raw": "{{baseUrl}}/certificates/bulk/revoke", "host": ["{{baseUrl}}"], "path": ["certificates", "bulk", "revoke"] },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ids\": [\"{{certificateId}}\"],\n  \"reason\": \"cessation\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/certificates/bulk/revoke",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "certificates",
+                "bulk",
+                "revoke"
+              ]
+            },
             "description": "Current contract: 501 Not Implemented. Intended for bulk revocation."
           }
         },
@@ -418,9 +674,33 @@
           "name": "POST bulk renew (501)",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }],
-            "body": { "mode": "raw", "raw": "{\n  \"ids\": [\"{{certificateId}}\"]\n}", "options": { "raw": { "language": "json" } } },
-            "url": { "raw": "{{baseUrl}}/certificates/bulk/renew", "host": ["{{baseUrl}}"], "path": ["certificates", "bulk", "renew"] },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ids\": [\"{{certificateId}}\"]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/certificates/bulk/renew",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "certificates",
+                "bulk",
+                "renew"
+              ]
+            },
             "description": "Current contract: 501 Not Implemented. Intended for bulk renewal."
           }
         },
@@ -428,9 +708,33 @@
           "name": "POST bulk delete (501)",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }],
-            "body": { "mode": "raw", "raw": "{\n  \"ids\": [\"{{certificateId}}\"]\n}", "options": { "raw": { "language": "json" } } },
-            "url": { "raw": "{{baseUrl}}/certificates/bulk/delete", "host": ["{{baseUrl}}"], "path": ["certificates", "bulk", "delete"] },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ids\": [\"{{certificateId}}\"]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/certificates/bulk/delete",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "certificates",
+                "bulk",
+                "delete"
+              ]
+            },
             "description": "Current contract: 501 Not Implemented. Gateway-owned projection deletion."
           }
         },
@@ -438,9 +742,33 @@
           "name": "POST bulk export (501)",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }],
-            "body": { "mode": "raw", "raw": "{\n  \"ids\": [\"{{certificateId}}\"],\n  \"format\": \"pem\"\n}", "options": { "raw": { "language": "json" } } },
-            "url": { "raw": "{{baseUrl}}/certificates/bulk/export", "host": ["{{baseUrl}}"], "path": ["certificates", "bulk", "export"] },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ids\": [\"{{certificateId}}\"],\n  \"format\": \"pem\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/certificates/bulk/export",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "certificates",
+                "bulk",
+                "export"
+              ]
+            },
             "description": "Current contract: 501 Not Implemented. Intended for bulk export."
           }
         }
