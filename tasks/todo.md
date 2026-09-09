@@ -1,9 +1,9 @@
 # Certificates API v3 Write Phase
 
 ## Phase 1: Capability and Contract Gates
-- [ ] Task 1A: Verify runtime image and digest
-- [ ] Task 1B: Verify issue and revoke operations
-- [ ] Task 1C: Verify unhold operation
+- [x] Task 1A: Verify runtime image and digest
+- [x] Task 1B: Verify issue and revoke operations
+- [x] Task 1C: Verify unhold operation
 - [ ] Task 2: Lock v2 parity, permissions, and policies
 - [ ] Task 3A: Implement certificate identity normalization
 - [ ] Task 3B: Wire audit and idempotency infrastructure
