@@ -156,7 +156,7 @@ services:
       - migration
 
   ejbca:
-    image: "${EJBCA_IMAGE:-keyfactor/ejbca-ce:latest}"
+    image: "${EJBCA_IMAGE:-keyfactor/ejbca-ce:9.3.7}"
     container_name: ${EJBCA_CONTAINER_NAME:-ucm-ejbca}
     hostname: ejbca
     restart: unless-stopped

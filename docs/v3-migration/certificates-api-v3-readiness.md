@@ -2,6 +2,7 @@
 
 This document records the phase-two contract prerequisites for certificate write, import, export, and bulk operations. These routes remain `501 Not Implemented` in the current phase.
 
+
 ## Route matrix
 
 | Route | Validation | Permission | Success body/status | Error/status | Content type | Audit | Idempotency/retry | Partial failure | EJBCA operation/version |

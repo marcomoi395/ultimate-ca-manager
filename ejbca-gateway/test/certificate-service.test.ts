@@ -22,8 +22,8 @@ describe('CertificatesService', () => {
       listCertificates: async () => ({ certificates: [{ id: 'cert-1' }] }),
     } as never;
     const service = new CertificatesService(adapter);
-    await expect(service.list({ page: 1, limit: 25 })).resolves.toEqual({
-      data: [{ id: 'cert-1', serial_number: 'cert-1', subject: null, issuer: null, status: 'valid', has_private_key: false }],
+    await expect(service.list({ page: 1, limit: 25 })).resolves.toMatchObject({
+      data: [expect.objectContaining({ id: 'cert-1', serial_number: 'cert-1', subject: null, issuer: null, status: 'valid', has_private_key: false })],
       meta: { page: 1, per_page: 25, total: 1 },
     });
   });

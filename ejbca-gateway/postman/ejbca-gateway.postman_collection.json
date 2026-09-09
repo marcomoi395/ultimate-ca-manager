@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "EJBCA Gateway API",
-    "description": "Generated from implemented NestJS controllers in ejbca-gateway. Global prefix: /api/v3.",
+    "description": "Generated from NestJS controllers in ejbca-gateway. Global prefix: /api/v3. Certificate read routes are executable; write/import/bulk routes are included with their current 501 contract.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -68,7 +68,7 @@
   ],
   "item": [
     {
-      "name": "Foundation",
+      "name": "health",
       "item": [
         {
           "name": "GET health",
@@ -88,7 +88,12 @@
               ]
             }
           }
-        },
+        }
+      ]
+    },
+    {
+      "name": "meta",
+      "item": [
         {
           "name": "GET contract metadata",
           "request": {
@@ -108,7 +113,12 @@
               ]
             }
           }
-        },
+        }
+      ]
+    },
+    {
+      "name": "system",
+      "item": [
         {
           "name": "GET chain repair status",
           "request": {
@@ -142,11 +152,45 @@
               ]
             }
           }
+        },
+        {
+          "name": "POST system chain repair run",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/system/chain-repair/run",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "system",
+                "chain-repair",
+                "run"
+              ]
+            },
+            "description": "Runs the EJBCA chain repair operation.",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
         }
       ]
     },
     {
-      "name": "Certificate Authorities",
+      "name": "cas",
       "item": [
         {
           "name": "GET list CAs",
@@ -210,35 +254,11 @@
               ]
             }
           }
-        },
-        {
-          "name": "GET CA templates",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/cas/{{caId}}/templates",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "cas",
-                ":caId",
-                "templates"
-              ],
-              "variable": [
-                {
-                  "key": "caId",
-                  "value": "{{caId}}"
-                }
-              ]
-            }
-          }
         }
       ]
     },
     {
-      "name": "Certificates",
+      "name": "certificates",
       "item": [
         {
           "name": "GET list certificates",
@@ -274,41 +294,6 @@
           }
         },
         {
-          "name": "GET certificate compliance",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/certificates/compliance",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "certificates",
-                "compliance"
-              ]
-            }
-          }
-        },
-        {
-          "name": "GET certificate lint status",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/certificates/lint/status",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "certificates",
-                "lint",
-                "status"
-              ]
-            }
-          }
-        },
-        {
           "name": "GET certificate details",
           "request": {
             "method": "GET",
@@ -332,499 +317,137 @@
           }
         },
         {
-          "name": "GET certificate lint",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/certificates/{{certificateId}}/lint",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "certificates",
-                ":certificateId",
-                "lint"
-              ],
-              "variable": [
-                {
-                  "key": "certificateId",
-                  "value": "{{certificateId}}"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "POST create certificate",
+          "name": "POST create certificate (501)",
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/certificates",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "certificates"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"ca_id\": \"{{caId}}\",\n  \"cn\": \"example.test\",\n  \"cert_type\": \"x509\",\n  \"description\": \"Issued from Postman\",\n  \"key_type\": \"RSA\",\n  \"key_size\": 2048,\n  \"validity_days\": 365\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
+            "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }],
+            "body": { "mode": "raw", "raw": "{\n  \"cn\": \"example.com\",\n  \"ca_id\": \"ca-1\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{baseUrl}}/certificates", "host": ["{{baseUrl}}"], "path": ["certificates"] },
+            "description": "Current contract: 501 Not Implemented. Intended for certificate issuance."
           }
         },
         {
-          "name": "PATCH rename certificate",
+          "name": "PATCH rename certificate (410)",
           "request": {
             "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/certificates/{{certificateId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "certificates",
-                "certificateId"
-              ],
-              "variable": [
-                {
-                  "key": "certificateId",
-                  "value": "{{certificateId}}"
-                }
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"descr\": \"Updated description\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
+            "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }],
+            "body": { "mode": "raw", "raw": "{\n  \"descr\": \"example.com certificate\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{baseUrl}}/certificates/{{certificateId}}", "host": ["{{baseUrl}}"], "path": ["certificates", ":certificateId"], "variable": [{ "key": "certificateId", "value": "{{certificateId}}" }] },
+            "description": "Current contract: 410 Gone. UCM metadata operation, not EJBCA passthrough."
           }
         },
         {
-          "name": "POST import certificate",
+          "name": "POST revoke certificate (501)",
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/certificates/import",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "certificates",
-                "import"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"pem_content\": \"-----BEGIN CERTIFICATE-----\\n...\\n-----END CERTIFICATE-----\",\n  \"ca_id\": \"{{caId}}\",\n  \"name\": \"imported-cert\",\n  \"import_key\": false,\n  \"update_existing\": false\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
+            "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }],
+            "body": { "mode": "raw", "raw": "{\n  \"reason\": \"cessation\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{baseUrl}}/certificates/{{certificateId}}/revoke", "host": ["{{baseUrl}}"], "path": ["certificates", ":certificateId", "revoke"], "variable": [{ "key": "certificateId", "value": "{{certificateId}}" }] },
+            "description": "Current contract: 501 Not Implemented. Intended for revocation."
           }
         },
         {
-          "name": "POST export certificate",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/certificates/{{certificateId}}/export",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "certificates",
-                "certificateId",
-                "export"
-              ],
-              "variable": [
-                {
-                  "key": "certificateId",
-                  "value": "{{certificateId}}"
-                }
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"format\": \"pem\",\n  \"include_key\": false,\n  \"include_chain\": true\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "POST export all certificates",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/certificates/export",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "certificates",
-                "export"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"format\": \"pem\",\n  \"include_chain\": true\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "POST revoke certificate",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/certificates/{{certificateId}}/revoke",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "certificates",
-                "certificateId",
-                "revoke"
-              ],
-              "variable": [
-                {
-                  "key": "certificateId",
-                  "value": "{{certificateId}}"
-                }
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"reason\": \"cessation\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "POST unhold certificate",
+          "name": "POST unhold certificate (501)",
           "request": {
             "method": "POST",
             "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/certificates/{{certificateId}}/unhold",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "certificates",
-                "certificateId",
-                "unhold"
-              ],
-              "variable": [
-                {
-                  "key": "certificateId",
-                  "value": "{{certificateId}}"
-                }
-              ]
-            }
+            "url": { "raw": "{{baseUrl}}/certificates/{{certificateId}}/unhold", "host": ["{{baseUrl}}"], "path": ["certificates", ":certificateId", "unhold"], "variable": [{ "key": "certificateId", "value": "{{certificateId}}" }] },
+            "description": "Current contract: 501 Not Implemented. Intended to remove a certificate hold."
           }
         },
         {
-          "name": "POST renew certificate",
+          "name": "POST renew certificate (501)",
           "request": {
             "method": "POST",
             "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/certificates/{{certificateId}}/renew",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "certificates",
-                "certificateId",
-                "renew"
-              ],
-              "variable": [
-                {
-                  "key": "certificateId",
-                  "value": "{{certificateId}}"
-                }
-              ]
-            }
+            "url": { "raw": "{{baseUrl}}/certificates/{{certificateId}}/renew", "host": ["{{baseUrl}}"], "path": ["certificates", ":certificateId", "renew"], "variable": [{ "key": "certificateId", "value": "{{certificateId}}" }] },
+            "description": "Current contract: 501 Not Implemented. Intended for certificate renewal."
           }
         },
         {
-          "name": "POST upload certificate key",
+          "name": "POST export certificate (501)",
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/certificates/{{certificateId}}/key",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "certificates",
-                "certificateId",
-                "key"
-              ],
-              "variable": [
-                {
-                  "key": "certificateId",
-                  "value": "{{certificateId}}"
-                }
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"key\": \"-----BEGIN PRIVATE KEY-----\\n...\\n-----END PRIVATE KEY-----\",\n  \"passphrase\": null\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
+            "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }],
+            "body": { "mode": "raw", "raw": "{\n  \"format\": \"pem\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{baseUrl}}/certificates/{{certificateId}}/export", "host": ["{{baseUrl}}"], "path": ["certificates", ":certificateId", "export"], "variable": [{ "key": "certificateId", "value": "{{certificateId}}" }] },
+            "description": "Current contract: 501 Not Implemented. Intended for single-certificate export."
           }
         },
         {
-          "name": "POST submit certificate to CT",
+          "name": "POST export certificates (501)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }],
+            "body": { "mode": "raw", "raw": "{\n  \"format\": \"pem\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{baseUrl}}/certificates/export", "host": ["{{baseUrl}}"], "path": ["certificates", "export"] },
+            "description": "Current contract: 501 Not Implemented. Intended for multi-certificate export."
+          }
+        },
+        {
+          "name": "POST import certificate (501)",
           "request": {
             "method": "POST",
             "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/certificates/{{certificateId}}/submit-ct",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "certificates",
-                "certificateId",
-                "submit-ct"
-              ],
-              "variable": [
-                {
-                  "key": "certificateId",
-                  "value": "{{certificateId}}"
-                }
-              ]
-            }
+            "body": { "mode": "formdata", "formdata": [{ "key": "file", "type": "file", "src": "" }] },
+            "url": { "raw": "{{baseUrl}}/certificates/import", "host": ["{{baseUrl}}"], "path": ["certificates", "import"] },
+            "description": "Current contract: 501 Not Implemented. Intended for certificate import."
           }
         },
         {
-          "name": "POST bulk revoke certificates",
+          "name": "POST bulk operation (501)",
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/certificates/bulk/revoke",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "certificates",
-                "bulk",
-                "revoke"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"ids\": [\n    \"{{certificateId}}\"\n  ],\n  \"reason\": \"unspecified\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
+            "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }],
+            "body": { "mode": "raw", "raw": "{\n  \"ids\": [\"{{certificateId}}\"]\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{baseUrl}}/certificates/bulk/{{bulkOperation}}", "host": ["{{baseUrl}}"], "path": ["certificates", "bulk", ":bulkOperation"], "variable": [{ "key": "bulkOperation", "value": "revoke" }] },
+            "description": "Current contract: 501 Not Implemented. Generic bulk operation contract."
           }
         },
         {
-          "name": "POST bulk renew certificates",
+          "name": "POST bulk revoke (501)",
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/certificates/bulk/renew",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "certificates",
-                "bulk",
-                "renew"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"ids\": [\n    \"{{certificateId}}\"\n  ]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
+            "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }],
+            "body": { "mode": "raw", "raw": "{\n  \"ids\": [\"{{certificateId}}\"],\n  \"reason\": \"cessation\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{baseUrl}}/certificates/bulk/revoke", "host": ["{{baseUrl}}"], "path": ["certificates", "bulk", "revoke"] },
+            "description": "Current contract: 501 Not Implemented. Intended for bulk revocation."
           }
         },
         {
-          "name": "POST bulk delete certificates",
+          "name": "POST bulk renew (501)",
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/certificates/bulk/delete",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "certificates",
-                "bulk",
-                "delete"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"ids\": [\n    \"{{certificateId}}\"\n  ]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
+            "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }],
+            "body": { "mode": "raw", "raw": "{\n  \"ids\": [\"{{certificateId}}\"]\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{baseUrl}}/certificates/bulk/renew", "host": ["{{baseUrl}}"], "path": ["certificates", "bulk", "renew"] },
+            "description": "Current contract: 501 Not Implemented. Intended for bulk renewal."
           }
         },
         {
-          "name": "POST bulk export certificates",
+          "name": "POST bulk delete (501)",
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/certificates/bulk/export",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "certificates",
-                "bulk",
-                "export"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"ids\": [\n    \"{{certificateId}}\"\n  ],\n  \"format\": \"pem\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
+            "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }],
+            "body": { "mode": "raw", "raw": "{\n  \"ids\": [\"{{certificateId}}\"]\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{baseUrl}}/certificates/bulk/delete", "host": ["{{baseUrl}}"], "path": ["certificates", "bulk", "delete"] },
+            "description": "Current contract: 501 Not Implemented. Gateway-owned projection deletion."
           }
         },
         {
-          "name": "DELETE certificate",
+          "name": "POST bulk export (501)",
           "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/certificates/{{certificateId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "certificates",
-                "certificateId"
-              ],
-              "variable": [
-                {
-                  "key": "certificateId",
-                  "value": "{{certificateId}}"
-                }
-              ]
-            }
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }],
+            "body": { "mode": "raw", "raw": "{\n  \"ids\": [\"{{certificateId}}\"],\n  \"format\": \"pem\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{baseUrl}}/certificates/bulk/export", "host": ["{{baseUrl}}"], "path": ["certificates", "bulk", "export"] },
+            "description": "Current contract: 501 Not Implemented. Intended for bulk export."
           }
         }
       ]
     },
     {
-      "name": "CSRs",
+      "name": "csrs",
       "item": [
         {
           "name": "GET list CSRs",
@@ -881,55 +504,294 @@
               ]
             }
           }
-        }
-      ]
-    },
-    {
-      "name": "Templates",
-      "item": [
+        },
         {
-          "name": "GET list templates",
+          "name": "GET CSR export",
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
             "url": {
-              "raw": "{{baseUrl}}/templates",
+              "raw": "{{baseUrl}}/csrs/{{csrId}}/export",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "templates"
+                "csrs",
+                "{{csrId}}",
+                "export"
               ]
+            },
+            "description": "Exports a CSR as a PEM/binary response."
+          }
+        },
+        {
+          "name": "POST create CSR",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/csrs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "csrs"
+              ]
+            },
+            "description": "Creates a CSR through the CSR service.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"common_name\": \"example.test\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             }
           }
         },
         {
-          "name": "GET template details",
+          "name": "POST upload CSR",
           "request": {
-            "method": "GET",
-            "header": [],
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
             "url": {
-              "raw": "{{baseUrl}}/templates/{{templateId}}",
+              "raw": "{{baseUrl}}/csrs/upload",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "templates",
-                ":templateId"
-              ],
-              "variable": [
-                {
-                  "key": "templateId",
-                  "value": "{{templateId}}"
-                }
+                "csrs",
+                "upload"
               ]
+            },
+            "description": "Uploads CSR content.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pem_content\": \"-----BEGIN CERTIFICATE REQUEST-----\\\\n...\\\\n-----END CERTIFICATE REQUEST-----\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             }
+          }
+        },
+        {
+          "name": "POST import CSR",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/csrs/import",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "csrs",
+                "import"
+              ]
+            },
+            "description": "Imports a CSR multipart request.",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "POST bulk sign CSRs",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/csrs/bulk/sign",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "csrs",
+                "bulk",
+                "sign"
+              ]
+            },
+            "description": "Signs multiple CSRs.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ids\": [\n    \"{{csrId}}\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "POST bulk delete CSRs",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/csrs/bulk/delete",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "csrs",
+                "bulk",
+                "delete"
+              ]
+            },
+            "description": "Deletes multiple CSRs.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ids\": [\n    \"{{csrId}}\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "POST sign CSR",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/csrs/{{csrId}}/sign",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "csrs",
+                "{{csrId}}",
+                "sign"
+              ]
+            },
+            "description": "Signs a CSR.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"signature_algorithm\": \"SHA256WITHRSA\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "POST upload CSR key",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/csrs/{{csrId}}/key",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "csrs",
+                "{{csrId}}",
+                "key"
+              ]
+            },
+            "description": "Uploads a key for a CSR.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"key_pem\": \"-----BEGIN PRIVATE KEY-----\\\\n...\\\\n-----END PRIVATE KEY-----\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "DELETE CSR",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/csrs/{{csrId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "csrs",
+                "{{csrId}}"
+              ]
+            },
+            "description": "Deletes a CSR."
           }
         }
       ]
     },
     {
-      "name": "Supporting",
+      "name": "eku",
       "item": [
         {
           "name": "GET known EKUs",
@@ -947,7 +809,12 @@
               ]
             }
           }
-        },
+        }
+      ]
+    },
+    {
+      "name": "hsm",
+      "item": [
         {
           "name": "GET HSM providers",
           "request": {
@@ -981,7 +848,12 @@
               ]
             }
           }
-        },
+        }
+      ]
+    },
+    {
+      "name": "import",
+      "item": [
         {
           "name": "POST analyze import",
           "request": {
@@ -1015,7 +887,12 @@
               ]
             }
           }
-        },
+        }
+      ]
+    },
+    {
+      "name": "microsoft-cas",
+      "item": [
         {
           "name": "GET Microsoft CA enabled",
           "request": {
@@ -1047,30 +924,6 @@
                 "microsoft-cas",
                 "requests",
                 "pending"
-              ]
-            }
-          }
-        },
-        {
-          "name": "GET Microsoft CA templates",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/microsoft-cas/{{mscaId}}/templates",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "microsoft-cas",
-                ":mscaId",
-                "templates"
-              ],
-              "variable": [
-                {
-                  "key": "mscaId",
-                  "value": "{{mscaId}}"
-                }
               ]
             }
           }

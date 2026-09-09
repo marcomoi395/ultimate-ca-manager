@@ -6,12 +6,18 @@ describe('EJBCA resource adapter', () => {
     const calls: unknown[][] = [];
     const adapter = new EjbcaResourceAdapter({ request: async (...args) => { calls.push(args); return { ok: true }; } });
     await adapter.listCertificates(new URLSearchParams({ page: '2', limit: '10' }));
-    expect(calls).toEqual([['/v2/certificate/search', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ pagination: { current_page: 2, page_size: 10 }, criteria: [], sort_by: 'subject', sort_order: 'asc' }) }]]);
+    expect(calls).toEqual([['/v2/certificate/search', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ pagination: { current_page: 2, page_size: 10 }, criteria: [{ property: 'STATUS', operation: 'EQUAL', value: 'CERT_ACTIVE' }], sort_by: 'subject', sort_order: 'asc' }) }]]);
   });
   it('maps certificate count to the EJBCA v2 count endpoint', async () => {
     const calls: unknown[][] = [];
     const adapter = new EjbcaResourceAdapter({ request: async (...args) => { calls.push(args); return { count: 3 }; } });
     await adapter.getCertificateCount();
     expect(calls).toEqual([['/v2/certificate/count']]);
+  });
+  it('maps certificate detail to v2 search with SERIAL_NUMBER', async () => {
+    const calls: unknown[][] = [];
+    const adapter = new EjbcaResourceAdapter({ request: async (...args) => { calls.push(args); return { ok: true }; } });
+    await adapter.getCertificate('ABC');
+    expect(calls).toEqual([['/v2/certificate/search', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ pagination: { current_page: 1, page_size: 1 }, criteria: [{ property: 'SERIAL_NUMBER', operation: 'EQUAL', value: 'ABC' }], sort_by: 'subject', sort_order: 'asc' }) }]]);
   });
 });
