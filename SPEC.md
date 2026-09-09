@@ -18,37 +18,41 @@ API v2 Flask là nguồn chuẩn để xác định:
 
 API v3 **không được** gọi hoặc proxy qua API v2, không import code/model/service Flask, không đọc database UCM để giả lập response, và không dùng `UcmProxyClient` cho certificate flows.
 
-### Phạm vi giai đoạn này
+### Phạm vi hiện tại
 
-1. Hoàn thiện read contracts:
-   - `GET /certificates`
-   - `GET /certificates/:id`
-   - `GET /certificates/stats`
-2. Tự map dữ liệu EJBCA sang response contract tương thích v2/frontend.
-3. Trả `410 Gone` cho bảy endpoint không nên triển khai qua EJBCA REST.
-4. Giữ các endpoint write/import/bulk chưa triển khai ở `501 Not Implemented`, đồng thời chuẩn bị contract và verification matrix cho giai đoạn sau.
-5. Cập nhật `ejbca-gateway/AGENTS.md` để phản ánh convention thực tế và nguyên tắc độc lập v2/v3.
-6. Ghi nhận integration path riêng giữa frontend và v3; không giả định frontend tự động chuyển từ `/api/v2` sang `/api/v3`.
+Các read contract và bảy endpoint `410 Gone` đã hoàn thành, giữ làm baseline parity. Phần còn lại của phase này:
+
+1. Implement ba write endpoint:
+   - `POST /certificates`
+   - `POST /certificates/:id/revoke`
+   - `POST /certificates/:id/unhold`
+2. Giữ chín endpoint chưa đủ contract ở `501 Not Implemented`.
+3. Không gọi EJBCA hoặc Flask v2 từ các endpoint vẫn ở `501`.
+4. Bổ sung parity matrix, permission, validation và verification cho ba write endpoint.
+
+- `GET /certificates`, `GET /certificates/:id`, `GET /certificates/stats` đã có implementation và focused tests; giữ làm baseline đã hoàn thành của phase trước.
+- Bảy endpoint gateway-owned trả `410 Gone` đã có implementation và focused tests.
+- Các field bị chặn vẫn trả null/default an toàn theo `docs/v3-migration/certificates-api-v3-blockers.md`.
+- Artifact probes xác nhận read/issue/revoke contracts cụ thể; probe lỗi hoặc thiếu probe không là bằng chứng capability.
+- Gateway độc lập với Flask v2; frontend chưa chuyển tự động sang `/api/v3`.
 
 ### Người dùng và consumer
 
-- Frontend UCM hiện là consumer tham chiếu, nhưng đang gọi `/api/v2`.
-- Consumer v3 tương lai phải nhận response tương thích v2 mà không cần phụ thuộc runtime vào Flask.
+- Frontend UCM hiện là consumer tham chiếu, vẫn gọi `/api/v2`.
+- Consumer v3 tương lai nhận response tương thích v2 mà không phụ thuộc runtime vào Flask.
 - API v3 dùng authentication/permission độc lập của gateway.
+
 
 ## 2. Capability Map
 
-| Module id | Trách nhiệm | Phụ thuộc |
-|---|---|---|
-| `v2-contract-parity` | Trích xuất và khóa contract v2 cho certificate endpoints | — |
-| `certificate-identity` | Mapping id, serial, issuer/CA và lookup | `v2-contract-parity` |
-| `certificate-read` | List/detail/filter/pagination/sort bằng EJBCA adapter | `certificate-identity` |
-| `certificate-stats` | Stats tương thích v2, tính từ nguồn v3 được xác minh | `certificate-read` |
-| `removed-endpoints` | Trả 410 cho gateway-owned endpoints | `v2-contract-parity` |
-| `write-contracts` | Chuẩn bị contract issue/revoke/renew/export/import/bulk | `v2-contract-parity`, `certificate-identity` |
-| `gateway-governance` | Cập nhật AGENTS.md, regression matrix và integration notes | Tất cả module trên |
+| `v2-contract-parity` | Khóa contract v2 cho ba write endpoint còn trong scope | — |
+| `certificate-write` | Issue, revoke, unhold qua EJBCA adapter | `v2-contract-parity`, `certificate-identity` |
+| `certificate-identity` | Chuẩn hóa serial/issuer cho write lookup | `v2-contract-parity` |
+| `deferred-write-contracts` | Theo dõi chín route vẫn ở 501 và điều kiện gỡ 501 | `v2-contract-parity` |
 
-**Build order:** `v2-contract-parity` → `certificate-identity` → `certificate-read` → `certificate-stats`; `removed-endpoints` có thể song song sau `v2-contract-parity`; sau đó `write-contracts` → `gateway-governance`.
+Read, stats, removed-route implementation là baseline hoàn thành; không nằm trong task list hiện tại.
+
+**Build order:** `v2-contract-parity` → `certificate-identity` → `certificate-write`. `deferred-write-contracts` được duy trì song song.
 
 ## 3. Canonical v2 Contract
 
@@ -56,10 +60,6 @@ API v3 **không được** gọi hoặc proxy qua API v2, không import code/mod
 
 Nguồn chuẩn là `backend/utils/response.py` và các route v2:
 
-**Success**
-
-```json
-{
   "data": {},
   "message": "Optional success message",
   "meta": { "page": 1, "per_page": 20, "total": 100 }
@@ -217,14 +217,23 @@ POST  /certificates/:id/submit-ct
 
 Because v2 has implementations for some of these routes, the parity matrix must explicitly mark them as **intentional v3 divergence**: v3 is not implementing those UCM-owned workflows through EJBCA. The v3 error must use the established error filter shape and a stable code such as `GATEWAY_ENDPOINT_REMOVED`, with HTTP status 410.
 
-### 3.6. Not-yet-implemented write/import/bulk endpoints
+### 3.6. Write endpoints trong phạm vi triển khai
 
-These routes remain `501 Not Implemented` in this phase and require no EJBCA call:
+Ba endpoint sau cần được triển khai độc lập qua gateway/EJBCA:
 
 ```text
 POST /certificates
 POST /certificates/:id/revoke
 POST /certificates/:id/unhold
+```
+
+Mỗi route phải có parity record cho validation, permission, success/error body, status, content type, audit, idempotency, retry và operation/version EJBCA.
+
+### 3.7. Not-yet-implemented write/import/bulk endpoints
+
+Các route sau tiếp tục trả `501 Not Implemented`, không gọi EJBCA hoặc Flask v2:
+
+```text
 POST /certificates/:id/renew
 POST /certificates/:id/export
 POST /certificates/export
@@ -236,7 +245,7 @@ POST /certificates/bulk/delete
 POST /certificates/bulk/export
 ```
 
-Before implementation, each route needs a v2 parity record for request validation, auth permission, success body/message/meta, error status/body, content type, audit, idempotency, retry, partial failure and EJBCA REST operation/version. Import/bulk are gateway use cases, not 1:1 passthroughs.
+Lý do và điều kiện gỡ `501` được ghi tại `docs/v3-migration/certificates-api-v3-blockers.md`. Import/bulk là gateway use cases, không được passthrough 1:1.
 
 ## 4. Project Structure
 
@@ -309,21 +318,16 @@ bun run start:dev
 
 Runtime:
 
-```bash
-docker compose --env-file .env.ejbca.example \
-  -f docker-compose.yml -f docker-compose.dev.yml \
-  --profile migration up --build
+```text
+image mặc định: `keyfactor/ejbca-ce:9.3.7`.
+runtime image/digest: chưa xác nhận; `artifacts/ejbca-contract-probes/00-runtime-image.json` có `exit_code: 1`, `output: ""`.
+gateway nội bộ: `https://ejbca:8443/ejbca/ejbca-rest-api`.
+gateway port: `8081`.
+EJBCA dev ports: HTTPS `8444`, HTTP `8082`.
+mTLS mount: `secrets/ejbca`.
 ```
 
-EJBCA runtime hiện lấy từ compose:
-
-- image mặc định `keyfactor/ejbca-ce:latest`;
-- gateway gọi `https://ejbca:8443/ejbca/ejbca-rest-api` trong Docker network;
-- gateway expose port `8081`;
-- EJBCA dev expose HTTPS `8444` và HTTP `8082` trên loopback;
-- mTLS files mount từ `secrets/ejbca`.
-
-Trước write implementation phải xác minh và khóa EJBCA image version.
+Trước write implementation phải xác minh image/digest runtime và khóa EJBCA operation contract.
 
 ## 7. Testing Strategy
 
@@ -344,13 +348,13 @@ Trước write implementation phải xác minh và khóa EJBCA image version.
 - Raw EJBCA payload → public DTO mapping, không rò internal fields.
 
 ### Route/integration tests
-
 - Read routes yêu cầu authentication và `read:certificates`.
 - List truyền đúng criteria/pagination/sort sang EJBCA adapter.
 - Detail success/404/409.
 - Stats đủ `total`, `valid`, `expiring`, `expired`, `revoked`, `sources`.
 - Bảy removed routes trả 410, body ổn định và không gọi adapter/v2.
-- Mười hai write/import/bulk routes trả 501, không gọi adapter/v2.
+- Ba write routes trong phạm vi có validation, permission, success/error mapping và không gọi Flask v2.
+- Chín route deferred trả 501, không gọi adapter/v2.
 - Timeout, malformed EJBCA payload và upstream error mapping.
 
 ### Runtime verification
@@ -395,22 +399,25 @@ Trước write implementation phải xác minh và khóa EJBCA image version.
 
 ## 9. Success Criteria
 
-- [ ] `GET /certificates` v3 có success envelope/field/pagination tương thích v2 và frontend.
-- [ ] `GET /certificates/stats` v3 khớp định nghĩa v2, gồm `sources` dạng list và các count chính.
-- [ ] `GET /certificates/:id` tự lookup qua EJBCA, không qua v2, với 404/409 rõ ràng.
-- [ ] Multi-value filters và aliases được test.
-- [ ] Read routes có permission `read:certificates`.
-- [ ] Bảy endpoint gateway-owned trả 410 ổn định và không gọi EJBCA/v2.
-- [ ] Mười hai write/import/bulk routes trả 501 trong phase này và có parity matrix.
-- [ ] `ejbca-gateway/AGENTS.md` không còn yêu cầu các dependency/convention không tồn tại.
-- [ ] Có runtime evidence trên EJBCA instance và test chứng minh v3 không phụ thuộc v2.
+- [x] `GET /certificates` v3 có success envelope/field/pagination tương thích v2 và frontend.
+- [x] `GET /certificates/stats` v3 khớp định nghĩa v2, gồm `sources` dạng list và các count chính.
+- [x] `GET /certificates/:id` tự lookup qua EJBCA, không qua v2, với 404/409 rõ ràng.
+- [x] Multi-value filters và aliases được test.
+- [x] Read routes có permission `read:certificates`.
+- [x] Bảy endpoint gateway-owned trả 410 ổn định và không gọi EJBCA/v2.
+- [ ] `POST /certificates`, `POST /certificates/:id/revoke` và `POST /certificates/:id/unhold` có contract, implementation và tests đầy đủ.
+- [ ] Chín deferred write/import/bulk routes trả 501 ổn định và không gọi adapter/v2; source parity matrix cần đồng bộ từ 12 xuống 9 route.
+- [x] `ejbca-gateway/AGENTS.md` không còn yêu cầu các dependency/convention không tồn tại.
+- [ ] Runtime health/read evidence được xác nhận trên image đang chạy; probe `00-runtime-image.json` hiện thất bại (`exit_code: 1`, `output: ""`).
+- [x] Test suite có kiểm chứng v3 không phụ thuộc v2; artifact runtime không đủ để tự đánh dấu tiêu chí triển khai.
 
-## 10. Open Questions
+Các blocker còn lại:
 
-Các câu hỏi này không chặn việc lập planning nhưng phải được giải quyết trong planning/verification:
-
-1. EJBCA payload/version đang chạy cung cấp issuer/CA, status, dates và serial ở format nào?
-2. Có nguồn gateway-owned được phê duyệt cho `has_private_key`, `template_name`, compliance và `source` hay không?
-3. Integration path frontend → `/api/v3` sẽ là reverse proxy hay frontend base URL/config thay đổi?
-4. EJBCA image tag nào sẽ được khóa trước write implementation?
-5. Những field v2 nào bắt buộc phải có giá trị thực, thay vì null/default, khi chạy production?
+1. `unhold`: chưa có artifact probe hoặc operation/version EJBCA được xác nhận.
+2. `create`: probe `09-issue.json` xác nhận `POST /v1/certificate/pkcs10enroll` trả `201` và JSON gồm certificate, serial, response format, chain; request parity, auth, lỗi và persistence semantics vẫn phải khóa.
+3. `revoke`: probe `10-revoke.json` xác nhận `PUT /v1/certificate/{issuer_dn}/{serial}/revoke?reason=...` trả `200` với issuer, serial, reason, date, message, revoked; gateway parity, idempotency và audit vẫn phải khóa.
+4. `04-certificate-profiles.json` trả `404`; không được xem certificate profile endpoint hiện tại là capability đã xác minh.
+5. `11-ca-chain-download.json` trả `500`; chỉ được dùng như bằng chứng endpoint chain download chưa ổn định, không phải leaf export contract.
+6. `00-runtime-image.json` không xác nhận được container image/digest đang chạy.
+7. Các field UCM-only tiếp tục bị chặn theo `docs/v3-migration/certificates-api-v3-blockers.md`.
+8. Image tag cấu hình mặc định là `keyfactor/ejbca-ce:9.3.7`, nhưng image/digest runtime vẫn phải xác minh trước write implementation.

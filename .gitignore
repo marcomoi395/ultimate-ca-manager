@@ -116,3 +116,5 @@ docs/
 tasks/
 # Keep the V3 migration assessment source-controlled while preserving the
 # existing ignore policy for other docs.
+artifacts/
+scripts/ejbca_certificate_contract_probes.py
