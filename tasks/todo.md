@@ -6,7 +6,7 @@
 - [x] Task 1C: Verify unhold operation
 - [x] Task 2: Lock v2 parity, permissions, and policies
 - [x] Task 3A: Implement certificate identity normalization
-- [ ] Task 3B: Wire audit and idempotency infrastructure
+- [x] Task 3B: Wire audit and idempotency infrastructure
 
 ## Checkpoint: Capability and Contract Gate
 - [ ] Runtime and all operation contracts approved
