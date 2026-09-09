@@ -13,4 +13,16 @@ describe('certificate use cases', () => {
     ]);
     await expect(service.getById('00af12')).rejects.toMatchObject({ status: 409 });
   });
+  it('preserves leading zero serials and forwards issuer disambiguation', async () => {
+    const queries: URLSearchParams[] = [];
+    const service = new CertificatesService({
+      getCertificate: async (id: string, issuer?: string) => {
+        queries.push(new URLSearchParams({ serial: id, ...(issuer ? { issuer } : {}) }));
+        return [{ serial_number: id, issuer_dn: issuer ?? 'CN=CA' }];
+      },
+    } as never);
+    await expect(service.getById('00af12', 'CN=CA')).resolves.toMatchObject({ serial_number: '00af12' });
+    expect(queries[0].get('serial')).toBe('00af12');
+    expect(queries[0].get('issuer')).toBe('CN=CA');
+  });
 });

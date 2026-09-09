@@ -75,12 +75,14 @@ export class CertificatesService {
   compliance(): Promise<never> { return this.removed(); }
 
   lintStatus(): Promise<never> { return this.removed(); }
-  async getById(id: string): Promise<unknown> {
+  async getById(id: string, issuer?: string): Promise<unknown> {
     const result = this.reader
       ? await this.reader({ page: 1, limit: 100 })
-      : await this.adapter!.getCertificate(id);
+      : await this.adapter!.getCertificate(id, issuer);
     const certificates = this.extractCertificates(result).map(mapCertificatePublicData);
-    const matches = certificates.filter((certificate) => certificate.serial_number === id || certificate.id === id);
+    const matches = certificates.filter((certificate) =>
+      certificate.serial_number === id && (!issuer || certificate.issuer === issuer),
+    );
     if (matches.length > 1) throw new ConflictException(`Certificate ${id} is ambiguous`);
     const match = matches[0];
     if (!match) throw new NotFoundException(`Certificate ${id} not found`);
