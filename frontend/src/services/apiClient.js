@@ -15,6 +15,7 @@
  */
 
 const API_BASE_URL = '/api/v2'
+const V3_API_BASE_URL = '/api/v3'
 
 // CSRF token storage key
 const CSRF_TOKEN_KEY = 'ucm_csrf_token'
@@ -84,7 +85,7 @@ class APIClient {
     if (import.meta.env.DEV && options.params) {
       console.warn(`⚠️ apiClient does not support 'params'. Use buildQueryString() to append query params to the URL. Called on: ${endpoint}`)
     }
-    const url = `${options.apiVersion === 'v3' ? '/api/v3' : this.baseURL}${endpoint}`
+    const url = `${options.apiVersion === 'v3' ? V3_API_BASE_URL : this.baseURL}${endpoint}`
     
     const headers = {
       'Content-Type': 'application/json',

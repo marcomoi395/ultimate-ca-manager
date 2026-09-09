@@ -54,14 +54,14 @@ describe('casService', () => {
     casService = mod.casService
   })
 
-  it('getAll → GET /cas', async () => {
+  it('getAll → GET /cas through v3 gateway', async () => {
     await casService.getAll()
-    expect(mockApiClient.get).toHaveBeenCalledWith('/cas')
+    expect(mockApiClient.get).toHaveBeenCalledWith('/cas', { apiVersion: 'v3' })
   })
 
-  it('getById → GET /cas/:id', async () => {
+  it('getById → GET /cas/:id through v3 gateway', async () => {
     await casService.getById(5)
-    expect(mockApiClient.get).toHaveBeenCalledWith('/cas/5')
+    expect(mockApiClient.get).toHaveBeenCalledWith('/cas/5', { apiVersion: 'v3' })
   })
 
   it('create → POST /cas with data', async () => {

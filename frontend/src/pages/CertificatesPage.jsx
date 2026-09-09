@@ -161,14 +161,8 @@ export default function CertificatesPage() {
         casService.getAll(),
         certificatesService.getStats()
       ])
-      let certs = certsRes.data || []
-      
-      // Handle orphan filter client-side (no CA or CA not in our list)
-      if (filterStatus.includes('orphan') && cas.length > 0) {
-        const caRefIds = new Set(cas.map(ca => ca.refid))
-        certs = certs.filter(c => c.caref && !caRefIds.has(c.caref))
-      }
-      
+      const certs = certsRes.data || []
+
       setCertificates(certs)
       setTotal(certsRes.meta?.total || certsRes.pagination?.total || certs.length)
       setCas(casRes.data || [])
@@ -345,14 +339,16 @@ export default function CertificatesPage() {
   }
 
   // Normalize and filter data - detect orphans (cert without existing CA)
+  // EJBCA v3 caref is a CA fingerprint; local CA refid can be an internal ID.
   const filteredCerts = useMemo(() => {
-    const caRefIds = new Set(cas.map(ca => ca.refid))
-    
+    const caRefIds = new Set(cas.flatMap(ca => [ca.refid, ca.caref].filter(Boolean).map(String)))
+    const caSubjects = new Set(cas.flatMap(ca => [ca.subject, ca.issuer].filter(Boolean)))
+
     let result = certificates.map(cert => ({
       ...cert,
       status: cert.revoked ? 'revoked' : cert.status,
       cn: cert.descr || cert.cn || cert.common_name || extractCN(cert.subject) || (cert.san_dns ? JSON.parse(cert.san_dns)[0] : null) || 'Certificate',
-      isOrphan: cert.caref && !caRefIds.has(cert.caref)
+      isOrphan: Boolean(cert.caref && !caRefIds.has(String(cert.caref)) && !caSubjects.has(cert.issuer || cert.issuer_name))
     }))
     
     if (filterStatus.includes('orphan')) {
@@ -361,11 +357,11 @@ export default function CertificatesPage() {
 
     return result
   }, [certificates, cas, filterStatus, filterCA])
-
-  // Count orphans for stats
+  // Count only unresolved issuer references.
   const orphanCount = useMemo(() => {
-    const caRefIds = new Set(cas.map(ca => ca.refid))
-    return certificates.filter(c => c.caref && !caRefIds.has(c.caref)).length
+    const caRefIds = new Set(cas.flatMap(ca => [ca.refid, ca.caref].filter(Boolean).map(String)))
+    const caSubjects = new Set(cas.flatMap(ca => [ca.subject, ca.issuer].filter(Boolean)))
+    return certificates.filter(c => c.caref && !caRefIds.has(String(c.caref)) && !caSubjects.has(c.issuer || c.issuer_name)).length
   }, [certificates, cas])
 
   // Stats - from backend API for accurate counts
