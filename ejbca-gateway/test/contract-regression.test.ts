@@ -24,15 +24,28 @@ describe('endpoint response contracts', () => {
     const result = await lastValueFrom(
       new EnvelopeInterceptor().intercept(envelopeContext(), { handle: () => of(raw) } as never),
     );
-    expect(result).toEqual({
-      data: [{ id: 'cert-1', serial_number: 'cert-1', subject: null, issuer: null, status: 'valid', has_private_key: false }],
+    expect(result).toMatchObject({
+      data: [expect.objectContaining({ id: 'cert-1', serial_number: 'cert-1', subject: null, issuer: null, status: 'valid', has_private_key: false })],
       message: 'ok',
       meta: { page: 1, per_page: 20, total: 1 },
     });
   });
-  it('records the v2 parity route outcomes and permission contract', () => {
+  it('records the v2 parity route outcomes and write policies', () => {
     expect(CERTIFICATE_ROUTE_PARITY).toEqual({
       readPermission: 'read:certificates',
+      writes: {
+        'POST /certificates': { permission: 'write:certificates', operation: 'POST /v1/certificate/pkcs10enroll' },
+        'POST /certificates/:id/revoke': { permission: 'delete:certificates', operation: 'PUT /v1/certificate/:issuer/:serial/revoke' },
+        'POST /certificates/:id/unhold': { permission: 'write:certificates', operation: 'PUT /v1/certificate/:issuer/:serial/revoke?reason=REMOVE_FROM_CRL' },
+      },
+      audit: { required: true, fields: ['actor_id', 'action', 'correlation_id', 'outcome', 'metadata'] },
+      idempotency: {
+        key: 'Idempotency-Key',
+        sameHash: 'replay',
+        differentHash: '409',
+        concurrency: 'single-claim',
+      },
+      retry: 'no-automatic-retry-after-side-effect-dispatch',
       removed: [
         'PATCH /certificates/:id',
         'DELETE /certificates/:id',
@@ -43,9 +56,6 @@ describe('endpoint response contracts', () => {
         'POST /certificates/:id/submit-ct',
       ],
       notImplemented: [
-        'POST /certificates',
-        'POST /certificates/:id/revoke',
-        'POST /certificates/:id/unhold',
         'POST /certificates/:id/renew',
         'POST /certificates/:id/export',
         'POST /certificates/export',

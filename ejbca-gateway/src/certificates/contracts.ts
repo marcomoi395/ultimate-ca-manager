@@ -1,5 +1,18 @@
 export const CERTIFICATE_ROUTE_PARITY = {
   readPermission: 'read:certificates',
+  writes: {
+    'POST /certificates': { permission: 'write:certificates', operation: 'POST /v1/certificate/pkcs10enroll' },
+    'POST /certificates/:id/revoke': { permission: 'delete:certificates', operation: 'PUT /v1/certificate/:issuer/:serial/revoke' },
+    'POST /certificates/:id/unhold': { permission: 'write:certificates', operation: 'PUT /v1/certificate/:issuer/:serial/revoke?reason=REMOVE_FROM_CRL' },
+  },
+  audit: { required: true, fields: ['actor_id', 'action', 'correlation_id', 'outcome', 'metadata'] },
+  idempotency: {
+    key: 'Idempotency-Key',
+    sameHash: 'replay',
+    differentHash: '409',
+    concurrency: 'single-claim',
+  },
+  retry: 'no-automatic-retry-after-side-effect-dispatch',
   removed: [
     'PATCH /certificates/:id',
     'DELETE /certificates/:id',
@@ -10,9 +23,6 @@ export const CERTIFICATE_ROUTE_PARITY = {
     'POST /certificates/:id/submit-ct',
   ],
   notImplemented: [
-    'POST /certificates',
-    'POST /certificates/:id/revoke',
-    'POST /certificates/:id/unhold',
     'POST /certificates/:id/renew',
     'POST /certificates/:id/export',
     'POST /certificates/export',
