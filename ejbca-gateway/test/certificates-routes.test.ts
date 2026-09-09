@@ -5,7 +5,9 @@ describe('certificate routes', () => {
   it('does not forward certificate mutations to another version', async () => {
     const calls: string[] = [];
     const service = {
-      mutate: async () => { calls.push('mutate'); return { ok: true }; },
+      issue: async () => { calls.push('issue'); return { ok: true }; },
+      revoke: async () => { calls.push('revoke'); return { ok: true }; },
+      unhold: async () => { calls.push('unhold'); return { ok: true }; },
       exportFile: async () => { calls.push('export'); return { ok: true }; },
       lint: async () => { calls.push('lint'); return { ok: true }; },
       removed: async () => { calls.push('removed'); return { ok: true }; },
@@ -17,7 +19,7 @@ describe('certificate routes', () => {
     await controller.export('cert-1', { format: 'pem' });
     await controller.lint('cert-1', 'rfc5280');
 
-    expect(calls).toEqual(['mutate', 'mutate', 'export', 'removed']);
+    expect(calls).toEqual(['issue', 'revoke', 'export', 'removed']);
   });
 
   it('exposes read operations through the certificate service', async () => {

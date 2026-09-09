@@ -1,8 +1,8 @@
-import { ConflictException, GoneException, Inject, Injectable, NotFoundException, NotImplementedException } from '@nestjs/common';
+import { Injectable, ConflictException, GoneException, Inject, NotFoundException, NotImplementedException, Optional } from '@nestjs/common';
+import { CertificateWriteInfrastructure } from './write-infrastructure';
 import { EjbcaResourceAdapter } from '../integrations/ejbca/resource-adapter';
 import { mapCertificatePublicData } from './public-mapper';
 import type { CertificateListQuery } from './dtos/certificate-list.query';
-
 type CertificateReader = (query: CertificateListQuery) => Promise<unknown>;
 
 export interface CertificateReadResult {
@@ -13,14 +13,15 @@ export interface CertificateReadResult {
 @Injectable()
 export class CertificatesService {
   private readonly reader?: CertificateReader;
+  private readonly adapter?: EjbcaResourceAdapter;
 
-  constructor(@Inject(EjbcaResourceAdapter) source: EjbcaResourceAdapter | CertificateReader) {
+  constructor(
+    @Inject(EjbcaResourceAdapter) source: EjbcaResourceAdapter | CertificateReader,
+    @Optional() @Inject(CertificateWriteInfrastructure) private readonly writes = new CertificateWriteInfrastructure(),
+  ) {
     if (typeof source === 'function') this.reader = source;
     else this.adapter = source;
   }
-
-  private readonly adapter?: EjbcaResourceAdapter;
-
   async list(query: CertificateListQuery): Promise<CertificateReadResult> {
     const result = this.reader
       ? await this.reader(query)
@@ -95,6 +96,43 @@ export class CertificatesService {
 
   exportFile(): Promise<never> {
     throw new NotImplementedException('Certificate export through the EJBCA adapter is not implemented');
+  }
+  async issue(body: Record<string, unknown>, key?: string): Promise<unknown> {
+    const claim = this.writes.claim(key, JSON.stringify(body));
+    if (claim.status === 'REPLAY') return claim.response;
+    if (claim.status === 'CONFLICT') return this.writes.conflict();
+    const result = this.publicWriteResult(await this.adapter!.issueCertificate(body));
+    this.writes.saveResponse(key, result);
+    this.writes.audit({ actor_id: 'unknown', action: 'certificate.issue', correlation_id: 'unknown', outcome: 'success', metadata: {} });
+    return result;
+  }
+
+  async revoke(id: string, body: { reason?: string; issuer?: string }, key?: string): Promise<unknown> {
+    const claim = this.writes.claim(key, JSON.stringify({ id, ...body }));
+    if (claim.status === 'REPLAY') return claim.response;
+    if (claim.status === 'CONFLICT') return this.writes.conflict();
+    const certificate = await this.getById(id, body.issuer) as { issuer?: string };
+    const result = this.publicWriteResult(await this.adapter!.revokeCertificate(String(certificate.issuer), id, body.reason ?? 'UNSPECIFIED'));
+    this.writes.saveResponse(key, result);
+    this.writes.audit({ actor_id: 'unknown', action: 'certificate.revoke', correlation_id: 'unknown', outcome: 'success', metadata: { serial: id } });
+    return result;
+  }
+
+  async unhold(id: string, issuer?: string, key?: string): Promise<unknown> {
+    const claim = this.writes.claim(key, JSON.stringify({ id, issuer }));
+    if (claim.status === 'REPLAY') return claim.response;
+    if (claim.status === 'CONFLICT') return this.writes.conflict();
+    const certificate = await this.getById(id, issuer) as { issuer?: string };
+    const result = this.publicWriteResult(await this.adapter!.unholdCertificate(String(certificate.issuer), id));
+    this.writes.saveResponse(key, result);
+    this.writes.audit({ actor_id: 'unknown', action: 'certificate.unhold', correlation_id: 'unknown', outcome: 'success', metadata: { serial: id } });
+    return result;
+  }
+
+  private publicWriteResult(result: unknown): Record<string, unknown> {
+    if (!result || typeof result !== 'object') return { status: 'success' };
+    const value = result as Record<string, unknown>;
+    return Object.fromEntries(Object.entries(value).filter(([key]) => !/(certificate|private|password|token|csr)/i.test(key)));
   }
 
   lint(_id?: string, _profile?: string): Promise<never> { return this.removed(); }

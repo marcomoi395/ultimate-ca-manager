@@ -72,4 +72,15 @@ export class EjbcaResourceAdapter {
   request(path: string, init?: RequestInit): Promise<unknown> {
     return this.client.request(path, init);
   }
+  issueCertificate(body: unknown): Promise<unknown> {
+    return this.client.request('/v1/certificate/pkcs10enroll', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  }
+
+  revokeCertificate(issuer: string, serial: string, reason: string): Promise<unknown> {
+    return this.client.request(`/v1/certificate/${encodeURIComponent(issuer)}/${encodeURIComponent(serial)}/revoke?reason=${encodeURIComponent(reason)}`, { method: 'PUT' });
+  }
+
+  unholdCertificate(issuer: string, serial: string): Promise<unknown> {
+    return this.revokeCertificate(issuer, serial, 'REMOVE_FROM_CRL');
+  }
 }
