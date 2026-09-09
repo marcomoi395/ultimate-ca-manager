@@ -31,15 +31,13 @@ export class EjbcaResourceAdapter {
     return this.client.request('/v2/certificate/count');
   }
 
-  getCertificate(id: string, issuer?: string): Promise<unknown> {
-    const criteria = [{ property: 'SERIAL_NUMBER', operation: 'EQUAL', value: id }];
-    if (issuer) criteria.push({ property: 'CA', operation: 'EQUAL', value: issuer });
+  getCertificate(id: string, _issuer?: string): Promise<unknown> {
     return this.client.request('/v2/certificate/search', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
-        pagination: { current_page: 1, page_size: issuer ? 100 : 1 },
-        criteria,
+        pagination: { current_page: 1, page_size: 1 },
+        criteria: [{ property: 'SERIAL_NUMBER', operation: 'EQUAL', value: id }],
         sort_by: 'subject',
         sort_order: 'asc',
       }),

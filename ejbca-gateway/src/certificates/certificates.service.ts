@@ -111,8 +111,8 @@ export class CertificatesService {
     const claim = this.writes.claim(key, JSON.stringify({ id, ...body }));
     if (claim.status === 'REPLAY') return claim.response;
     if (claim.status === 'CONFLICT') return this.writes.conflict();
-    const certificate = await this.getById(id, body.issuer) as { issuer?: string };
-    const result = this.publicWriteResult(await this.adapter!.revokeCertificate(String(certificate.issuer), id, body.reason ?? 'UNSPECIFIED'));
+    if (!body.issuer) throw new NotFoundException(`Certificate ${id} issuer not found`);
+    const result = this.publicWriteResult(await this.adapter!.revokeCertificate(body.issuer, id, body.reason ?? 'UNSPECIFIED'));
     this.writes.saveResponse(key, result);
     this.writes.audit({ actor_id: 'unknown', action: 'certificate.revoke', correlation_id: 'unknown', outcome: 'success', metadata: { serial: id } });
     return result;
@@ -122,8 +122,8 @@ export class CertificatesService {
     const claim = this.writes.claim(key, JSON.stringify({ id, issuer }));
     if (claim.status === 'REPLAY') return claim.response;
     if (claim.status === 'CONFLICT') return this.writes.conflict();
-    const certificate = await this.getById(id, issuer) as { issuer?: string };
-    const result = this.publicWriteResult(await this.adapter!.unholdCertificate(String(certificate.issuer), id));
+    if (!issuer) throw new NotFoundException(`Certificate ${id} issuer not found`);
+    const result = this.publicWriteResult(await this.adapter!.unholdCertificate(issuer, id));
     this.writes.saveResponse(key, result);
     this.writes.audit({ actor_id: 'unknown', action: 'certificate.unhold', correlation_id: 'unknown', outcome: 'success', metadata: { serial: id } });
     return result;
