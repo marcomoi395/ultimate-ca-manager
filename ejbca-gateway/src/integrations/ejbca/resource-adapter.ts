@@ -43,15 +43,19 @@ export class EjbcaResourceAdapter {
       }),
     });
   }
+  getRevocationStatus(issuer: string, serial: string): Promise<unknown> {
+    return this.client.request(`/v1/certificate/${encodeURIComponent(issuer)}/${encodeURIComponent(serial)}/revocationstatus`);
+  }
+
 
   listCas(query?: URLSearchParams): Promise<unknown> {
     const suffix = query && query.size > 0 ? `?${query.toString()}` : '';
     return this.client.request(`/v1/ca${suffix}`);
   }
-
   getCa(id: string): Promise<unknown> {
     return this.client.request(`/v1/ca/${encodeURIComponent(id)}`);
   }
+
 
   listCsrs(query?: URLSearchParams): Promise<unknown> {
     const suffix = query && query.size > 0 ? `?${query.toString()}` : '';

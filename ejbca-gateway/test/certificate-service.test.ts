@@ -11,11 +11,34 @@ describe('CertificatesService', () => {
   it('computes statistics from certificate records', async () => {
     const calls: string[] = [];
     const adapter = {
-      listCertificates: async () => { calls.push('list'); return { certificates: [{ valid_to: '2099-01-01T00:00:00Z' }] }; },
+      listCertificates: async (query: URLSearchParams) => {
+        calls.push('list');
+        return query.get('status') === 'CERT_ACTIVE'
+          ? { certificates: [{ valid_to: '2099-01-01T00:00:00Z' }] }
+          : { certificates: [] };
+      },
     } as never;
     const service = new CertificatesService(adapter);
     await expect(service.stats()).resolves.toEqual({ total: 1, valid: 1, expiring: 0, expired: 0, revoked: 0, sources: ['manual'] });
-    expect(calls).toEqual(['list']);
+    expect(calls).toEqual(['list', 'list']);
+  });
+  it('uses EJBCA revocationstatus when computing certificate statistics', async () => {
+    const service = new CertificatesService({
+      listCertificates: async (query: URLSearchParams) => query.get('status') === 'CERT_REVOKED'
+        ? { certificates: [{
+          serial_number: '00af12',
+          issuer_dn: 'CN=Example CA,O=Example',
+          status: 'CERT_REVOKED',
+          revoked: true,
+          valid_to: '2099-01-01T00:00:00Z',
+        }] }
+        : { certificates: [] },
+      getRevocationStatus: async () => ({ revoked: false }),
+    } as never);
+
+    await expect(service.stats()).resolves.toEqual({
+      total: 1, valid: 1, expiring: 0, expired: 0, revoked: 0, sources: ['manual'],
+    });
   });
 
   it('maps frontend statuses to EJBCA statuses and filters normalized results', async () => {
@@ -167,6 +190,34 @@ describe('CertificatesService', () => {
         valid_to: '2099-01-01T00:00:00Z',
       },
     ]);
+
+    const result = await service.list({ page: 1, limit: 25 });
+
+    expect(result.data[0]).toMatchObject({ status: 'valid', revoked: false, revoked_at: null });
+  });
+  it('treats an explicitly revoked certificate as revoked without a status field', async () => {
+    const service = new CertificatesService(async () => [{
+      serial_number: 'revoked-flag',
+      revoked: true,
+      valid_to: '2099-01-01T00:00:00Z',
+    }]);
+
+    const result = await service.list({ page: 1, limit: 25 });
+
+    expect(result.data[0]).toMatchObject({ status: 'revoked', revoked: true });
+  });
+  it('uses EJBCA revocationstatus as the current source of truth', async () => {
+    const service = new CertificatesService({
+      listCertificates: async () => ({ certificates: [{
+        serial_number: '00af12',
+        issuer_dn: 'CN=Example CA,O=Example',
+        status: 'CERT_REVOKED',
+        revoked: true,
+        revocationDate: 1700000000000,
+        valid_to: '2099-01-01T00:00:00Z',
+      }] }),
+      getRevocationStatus: async () => ({ revoked: false }),
+    } as never);
 
     const result = await service.list({ page: 1, limit: 25 });
 

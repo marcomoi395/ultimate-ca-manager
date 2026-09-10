@@ -30,7 +30,8 @@ export class CertificatesService {
     const result = this.reader
       ? await this.reader(query)
       : await this.readForQuery(query);
-    let certificates = this.extractCertificates(result).map(mapCertificatePublicData);
+    const records = await this.refreshRevocationStatuses(this.extractCertificates(result));
+    let certificates = records.map(mapCertificatePublicData);
     if (query.status?.length) certificates = certificates.filter((certificate) => query.status!.includes(certificate.status));
     const sortBy = query.sortBy ?? 'subject';
     const sortOrder = query.sortOrder ?? 'asc';
@@ -61,8 +62,8 @@ export class CertificatesService {
   async stats(): Promise<unknown> {
     const result = this.reader
       ? await this.reader({ page: 1, limit: 100 })
-      : await this.adapter!.listCertificates(new URLSearchParams({ page: '1', limit: '100' }));
-    const records = this.extractCertificates(result);
+      : await this.readForQuery({ page: 1, limit: 100 });
+    const records = await this.refreshRevocationStatuses(this.extractCertificates(result));
     const now = Date.now();
     const threshold = now + 30 * 86400000;
     let valid = 0;
@@ -99,7 +100,7 @@ export class CertificatesService {
     const result = this.reader
       ? await this.reader({ page: 1, limit: 100 })
       : await this.adapter!.getCertificate(id, issuer);
-    const certificates = this.extractCertificates(result).map(mapCertificatePublicData);
+    const certificates = (await this.refreshRevocationStatuses(this.extractCertificates(result))).map(mapCertificatePublicData);
     const matches = certificates.filter((certificate) =>
       certificate.serial_number === id && (!issuer || certificate.issuer === issuer),
     );
@@ -234,5 +235,27 @@ export class CertificatesService {
 
   private isRecord(value: unknown): value is Record<string, unknown> {
     return value !== null && typeof value === 'object' && !Array.isArray(value);
+  }
+
+  private async refreshRevocationStatuses(records: Record<string, unknown>[]): Promise<Record<string, unknown>[]> {
+    if (!this.adapter || typeof this.adapter.getRevocationStatus !== 'function') return records;
+    return Promise.all(records.map(async (record) => {
+      const issuer = record.issuer ?? record.issuer_dn ?? record.issuerDN;
+      const serial = record.serial_number ?? record.serialNumber ?? record.serial ?? record.id;
+      if (typeof issuer !== 'string' || !issuer || typeof serial !== 'string' || !serial) return record;
+      try {
+        const status = await this.adapter!.getRevocationStatus(issuer, serial);
+        if (!this.isRecord(status) || typeof status.revoked !== 'boolean') return record;
+        return {
+          ...record,
+          status: status.revoked ? 'CERT_REVOKED' : 'CERT_ACTIVE',
+          revoked: status.revoked,
+          revocationDate: status.revocation_date ?? status.revocationDate,
+          revocationReason: status.revocation_reason ?? status.revocationReason,
+        };
+      } catch {
+        return record;
+      }
+    }));
   }
 }

@@ -20,4 +20,10 @@ describe('EJBCA resource adapter', () => {
     await adapter.getCertificate('ABC');
     expect(calls).toEqual([['/v2/certificate/search', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ pagination: { current_page: 1, page_size: 1 }, criteria: [{ property: 'SERIAL_NUMBER', operation: 'EQUAL', value: 'ABC' }], sort_by: 'subject', sort_order: 'asc' }) }]]);
   });
+  it('maps certificate status verification to EJBCA revocationstatus', async () => {
+    const calls: unknown[][] = [];
+    const adapter = new EjbcaResourceAdapter({ request: async (...args) => { calls.push(args); return { revoked: false }; } });
+    await adapter.getRevocationStatus('CN=Example CA,O=Example', '00af12');
+    expect(calls).toEqual([['/v1/certificate/CN%3DExample%20CA%2CO%3DExample/00af12/revocationstatus']]);
+  });
 });

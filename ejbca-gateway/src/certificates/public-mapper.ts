@@ -37,9 +37,9 @@ function toPem(value: unknown): string | null {
   }
 }
 
-function normalizeStatus(value: unknown, validTo: string | null): CertificatePublicData['status'] {
+function normalizeStatus(value: unknown, revoked: boolean, validTo: string | null): CertificatePublicData['status'] {
   const status = String(value ?? '').toUpperCase();
-  if (status.includes('REVOK')) return 'revoked';
+  if (revoked || status.includes('REVOK')) return 'revoked';
   const expiry = validTo ? Date.parse(validTo) : Number.NaN;
   if (!Number.isNaN(expiry) && expiry <= Date.now()) return 'expired';
   if (!Number.isNaN(expiry) && expiry <= Date.now() + 30 * 86400000) return 'expiring';
@@ -67,7 +67,8 @@ export function mapCertificatePublicData(record: Record<string, unknown>): Certi
   const remaining = validTo ? Math.ceil((Date.parse(validTo) - Date.now()) / 86400000) : null;
   const san = asString(record.subjectAltName ?? record.subject_alt_name);
   const fingerprint = asString(record.fingerprint);
-  const status = normalizeStatus(record.status ?? record.certificate_status, validTo);
+  const currentlyRevoked = record.revoked === true;
+  const status = normalizeStatus(record.status ?? record.certificate_status, currentlyRevoked, validTo);
   const revokedAt = status === 'revoked' ? historicalRevokedAt : null;
   const revokeReason = status === 'revoked' ? record.revocationReason ?? null : null;
 
