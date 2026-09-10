@@ -78,16 +78,18 @@ export function EnrollCertificateModal({ open, onOpenChange, cas, onSubmit, t })
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Input
-            label={t('cas.create.certificateProfile')}
+            label="EJBCA Certificate Profile"
             value={form.certificate_profile_name}
             onChange={(event) => update('certificate_profile_name', event.target.value)}
             required
+            helperText="The exact profile name configured in EJBCA, for example UCMGATEWAY."
           />
           <Input
-            label={`${t('common.endEntity')} Profile`}
+            label="EJBCA End Entity Profile"
             value={form.end_entity_profile_name}
             onChange={(event) => update('end_entity_profile_name', event.target.value)}
             required
+            helperText="The exact end entity profile name configured in EJBCA, for example UCM-Gateway-Client-Entity."
           />
           <Input
             label={t('common.username')}
