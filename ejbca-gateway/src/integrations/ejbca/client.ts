@@ -6,11 +6,7 @@ export interface EjbcaConfig {
 }
 
 export function normalizeEjbcaError(status: number, payload: unknown): V3Error {
-  let detail = 'EJBCA request failed';
-  if (typeof payload === 'object' && payload !== null && 'message' in payload) {
-    const message = payload.message;
-    if (typeof message === 'string') detail = message;
-  }
+  const detail = errorMessage(payload) ?? 'EJBCA request failed';
   return {
     error: 'EJBCA upstream error',
     message: detail,
@@ -18,6 +14,15 @@ export function normalizeEjbcaError(status: number, payload: unknown): V3Error {
     detail: `upstream status ${status}`,
     error_code: 'EJBCA_UPSTREAM_ERROR',
   };
+}
+
+function errorMessage(payload: unknown): string | undefined {
+  if (typeof payload !== 'object' || payload === null) return undefined;
+  const value = payload as Record<string, unknown>;
+  for (const key of ['message', 'error_message', 'detail']) {
+    if (typeof value[key] === 'string' && value[key].trim()) return value[key] as string;
+  }
+  return undefined;
 }
 
 export class EjbcaClient {
