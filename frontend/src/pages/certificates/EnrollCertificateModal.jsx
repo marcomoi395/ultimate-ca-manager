@@ -58,7 +58,7 @@ export function EnrollCertificateModal({ open, onOpenChange, cas, onSubmit, t })
         </p>
 
         <Textarea
-          label={t('reports.certificateRequest')}
+          label={t('csrs.pasteCSR')}
           value={form.certificate_request}
           onChange={(event) => update('certificate_request', event.target.value)}
           placeholder={'-----BEGIN CERTIFICATE REQUEST-----\n...\n-----END CERTIFICATE REQUEST-----'}
