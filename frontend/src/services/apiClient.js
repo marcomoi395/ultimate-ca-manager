@@ -102,10 +102,10 @@ class APIClient {
     }
 
     const config = {
+      ...options,
       method,
       headers,
-      credentials: 'include', // Important pour les cookies de session
-      ...options,
+      credentials: 'include',
     }
 
     // Add body if present

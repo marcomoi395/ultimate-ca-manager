@@ -83,7 +83,7 @@ export default function CertificatesPage() {
   const [sortOrder, setSortOrder] = useState('asc')
   
   // Filters
-  const [filterStatus, setFilterStatus] = usePersistedState('ucm-filter-certs-status', [])
+  const [filterStatus, setFilterStatus] = useState([])
   const [filterCA, setFilterCA] = usePersistedState('ucm-filter-certs-ca', [])
   const [filterSource, setFilterSource] = usePersistedState('ucm-filter-certs-source', [])
   const [filterTemplate, setFilterTemplate] = usePersistedState('ucm-filter-certs-template', [])
@@ -156,17 +156,24 @@ export default function CertificatesPage() {
       }
       if (searchValue) params.search = searchValue
       
-      const [certsRes, casRes, statsRes] = await Promise.all([
+      const [certsResult, casResult, statsResult] = await Promise.allSettled([
         certificatesService.getAll(params),
         casService.getAll(),
         certificatesService.getStats()
       ])
-      const certs = certsRes.data || []
+      if (certsResult.status === 'rejected') throw certsResult.reason
 
+      const certsRes = certsResult.value
+      const certs = Array.isArray(certsRes?.data) ? certsRes.data : []
       setCertificates(certs)
-      setTotal(certsRes.meta?.total || certsRes.pagination?.total || certs.length)
-      setCas(casRes.data || [])
-      setCertStats(statsRes.data || { valid: 0, expiring: 0, expired: 0, revoked: 0, total: 0 })
+      setTotal(certsRes?.meta?.total || certsRes?.pagination?.total || certs.length)
+
+      if (casResult.status === 'fulfilled') {
+        setCas(Array.isArray(casResult.value?.data) ? casResult.value.data : [])
+      }
+      if (statsResult.status === 'fulfilled') {
+        setCertStats(statsResult.value?.data || { valid: 0, expiring: 0, expired: 0, revoked: 0, total: 0 })
+      }
     } catch (error) {
       showError(error.message || t('messages.errors.loadFailed.certificates'))
     } finally {
@@ -211,15 +218,13 @@ export default function CertificatesPage() {
   // Deep-link: auto-select certificate from URL param
   useEffect(() => {
     if (urlCertId && !loading && certificates.length > 0) {
-      const id = parseInt(urlCertId, 10)
-      if (!isNaN(id)) {
-        if (!isMobile) {
-          openWindow('certificate', id)
-        } else {
-          handleSelectCert({ id })
-        }
-        navigate('/certificates', { replace: true })
+      const id = String(urlCertId)
+      if (!isMobile) {
+        openWindow('certificate', id)
+      } else {
+        handleSelectCert({ id })
       }
+      navigate('/certificates', { replace: true })
     }
   }, [urlCertId, loading, certificates.length])
 
@@ -255,7 +260,7 @@ export default function CertificatesPage() {
     if (!confirmed) return
     try {
       muteToasts()
-      await certificatesService.revoke(id)
+      await certificatesService.revoke(id, { issuer: cert?.issuer })
       showSuccess(t('messages.success.other.revoked'))
       loadData()
       setSelectedCert(null)

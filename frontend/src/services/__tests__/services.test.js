@@ -179,9 +179,19 @@ describe('certificatesService', () => {
     expect(mockApiClient.post).toHaveBeenCalledWith('/certificates', data)
   })
 
-  it('revoke → POST /certificates/:id/revoke with reason', async () => {
-    await certificatesService.revoke(5, 'key_compromise')
-    expect(mockApiClient.post).toHaveBeenCalledWith('/certificates/5/revoke', { reason: 'key_compromise' })
+  it('revoke → POST v3 with issuer and idempotency key', async () => {
+    await certificatesService.revoke('serial-1', {
+      issuer: 'CN=ManagementCA',
+      reason: 'CERTIFICATE_HOLD'
+    })
+    expect(mockApiClient.post).toHaveBeenCalledWith(
+      '/certificates/serial-1/revoke',
+      { issuer: 'CN=ManagementCA', reason: 'CERTIFICATE_HOLD' },
+      expect.objectContaining({
+        apiVersion: 'v3',
+        headers: expect.objectContaining({ 'Idempotency-Key': expect.any(String) })
+      })
+    )
   })
 
   it('renew → POST /certificates/:id/renew', async () => {

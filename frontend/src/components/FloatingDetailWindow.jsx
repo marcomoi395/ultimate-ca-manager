@@ -133,7 +133,7 @@ export function FloatingDetailWindow({ windowInfo }) {
     )
     if (!confirmed) return
     try {
-      await certificatesService.revoke(windowInfo.entityId)
+      await certificatesService.revoke(windowInfo.entityId, { issuer: data?.issuer })
       showSuccess(t('certificates.revoked', 'Certificate revoked'))
       window.dispatchEvent(new CustomEvent('ucm:data-changed', { detail: { type: windowInfo.type } }))
       closeWindow(windowInfo.id)

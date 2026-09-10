@@ -116,7 +116,7 @@ export class CertificatesService {
   exportFile(): Promise<never> {
     throw new NotImplementedException('Certificate export through the EJBCA adapter is not implemented');
   }
-  async issue(body: Record<string, unknown>, key?: string): Promise<unknown> {
+  async issue(body: unknown, key?: string): Promise<unknown> {
     const claim = this.writes.claim(key, JSON.stringify(body));
     if (claim.status === 'REPLAY') return claim.response;
     if (claim.status === 'CONFLICT') return this.writes.conflict();

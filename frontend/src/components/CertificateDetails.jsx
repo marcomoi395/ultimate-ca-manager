@@ -18,7 +18,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { getAppTimezone } from '../stores/timezoneStore'
-import { formatDate as formatDateUtil, formatSerialNumberHex } from '../lib/utils'
+import { extractCN, formatDate as formatDateUtil, formatSerialNumberHex } from '../lib/utils'
 import { 
   Certificate, 
   Key, 
@@ -141,6 +141,7 @@ export function CertificateDetails({
   if (!certificate) return null
   
   const cert = certificate
+  const subjectCommonName = cert.cn || cert.common_name || extractCN(cert.subject)
   const serialHex = formatSerialNumberHex(cert.serial_number)
   const status = cert.revoked ? 'revoked' : (cert.status || 'valid')
   
@@ -291,13 +292,14 @@ export function CertificateDetails({
       {/* Subject Information */}
       <CompactSection title={t('common.subject')} icon={Globe} iconClass="icon-bg-blue">
         <CompactGrid>
-          <CompactField icon={Globe} label={t('common.commonName')} value={cert.cn || cert.common_name} />
+          <CompactField icon={Globe} label={t('common.commonName')} value={subjectCommonName} />
           <CompactField autoIcon="country" label={t('common.country')} value={cert.country} />
           <CompactField autoIcon="state" label={t('common.state')} value={cert.state} />
           <CompactField icon={MapPin} label={t('common.locality')} value={cert.locality} />
           <CompactField icon={Buildings} label={t('common.organization')} value={cert.organization} />
           <CompactField autoIcon="orgUnit" label={t('common.orgUnit')} value={cert.organizational_unit} />
           <CompactField icon={Envelope} label={t('common.email')} value={cert.email} colSpan={2} />
+          <CompactField autoIcon="subjectDN" label={t('details.subjectDN')} value={cert.subject} mono colSpan={2} />
         </CompactGrid>
       </CompactSection>
       
@@ -493,6 +495,8 @@ export function CertificateDetails({
         <CompactGrid cols={1}>
           <CompactField autoIcon="sha1" label="SHA-1" value={cert.thumbprint_sha1} mono copyable />
           <CompactField autoIcon="sha256" label="SHA-256" value={cert.thumbprint_sha256} mono copyable />
+          <CompactField autoIcon="subjectKeyId" label={t('details.ext.ski')} value={cert.ski} mono copyable />
+          <CompactField autoIcon="authorityKeyId" label={t('details.ext.aki')} value={cert.aki} mono copyable />
         </CompactGrid>
       </CompactSection>
       
@@ -550,7 +554,11 @@ export function CertificateDetails({
             </div>
             <CompactGrid>
               <CompactField autoIcon="revokedAt" label={t('details.revokedAt')} value={formatDate(cert.revoked_at)} />
-              <CompactField autoIcon="reason" label={t('details.reason')} value={cert.revoke_reason || t('details.unspecified')} />
+              <CompactField
+                autoIcon="reason"
+                label={t('details.reason')}
+                value={String(cert.revoke_reason) === '-1' ? t('details.unspecified') : cert.revoke_reason || t('details.unspecified')}
+              />
             </CompactGrid>
           </div>
         </CompactSection>

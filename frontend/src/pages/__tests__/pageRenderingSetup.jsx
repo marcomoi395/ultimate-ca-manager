@@ -99,6 +99,7 @@ vi.mock('../../hooks/useWebSocket', () => ({
 vi.mock('../../services/certificates.service', () => ({
   certificatesService: {
     getAll: vi.fn().mockResolvedValue({ data: [] }),
+    getStats: vi.fn().mockResolvedValue({ data: { total: 0, valid: 0, expiring: 0, expired: 0, revoked: 0, sources: [] } }),
     getById: vi.fn().mockResolvedValue({ data: {} }),
     create: vi.fn().mockResolvedValue({ data: {} }),
     revoke: vi.fn().mockResolvedValue({ data: {} }),

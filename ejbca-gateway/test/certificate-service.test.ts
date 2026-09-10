@@ -157,6 +157,21 @@ describe('CertificatesService', () => {
 
     expect(result.data[0]).toMatchObject({ status: 'revoked', revoked: true });
   });
+  it('treats active certificates with historical revocation data as valid', async () => {
+    const service = new CertificatesService(async () => [
+      {
+        serial_number: 'unheld',
+        status: 'CERT_ACTIVE',
+        revocationDate: 1700000000000,
+        revocationReason: 'CERTIFICATE_HOLD',
+        valid_to: '2099-01-01T00:00:00Z',
+      },
+    ]);
+
+    const result = await service.list({ page: 1, limit: 25 });
+
+    expect(result.data[0]).toMatchObject({ status: 'valid', revoked: false, revoked_at: null });
+  });
   it('does not proxy certificate reads through UCM v2', async () => {
     const adapter = {
       listCertificates: async (query: URLSearchParams) => query.get('status') === 'CERT_ACTIVE'
@@ -189,6 +204,21 @@ describe('CertificatesService', () => {
     }));
     expect(result.data[0]).not.toHaveProperty('private_key');
     expect(result.data[0]).not.toHaveProperty('certificate_data');
+  });
+  it('preserves EJBCA base64-encoded PEM certificates', async () => {
+    const pem = '-----BEGIN CERTIFICATE-----\nTEST\n-----END CERTIFICATE-----\n';
+    const service = new CertificatesService(async () => [{
+      serial_number: 'pem-cert',
+      subject_dn: 'CN=pem.example',
+      base64Cert: btoa(pem),
+    }]);
+    const result = await service.list({ page: 1, limit: 1 });
+    expect(result.data[0].pem).toBe(pem);
+  });
+  it('normalizes EJBCA hexadecimal serial numbers to decimal', async () => {
+    const service = new CertificatesService(async () => [{ serialNumber: '00af12', serial_number: '00af12', subject_dn: 'CN=decimal.example' }]);
+    const result = await service.list({ page: 1, limit: 1 });
+    expect(result.data[0].serial_number_decimal).toBe('44818');
   });
   it('computes v2-compatible status counts and normalized sources', async () => {
     const service = new CertificatesService(async () => [

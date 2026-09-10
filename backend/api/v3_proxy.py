@@ -15,12 +15,12 @@ def _proxy(resource, suffix):
     query = urlencode(request.args, doseq=True)
     url = f'{gateway_url}{path}' + (f'?{query}' if query else '')
     headers = {'Accept': 'application/json'}
-    for name in ('Cookie', 'X-API-Key'):
+    for name in ('Content-Type', 'Cookie', 'X-API-Key', 'Idempotency-Key', 'X-CSRF-Token'):
         value = request.headers.get(name)
         if value:
             headers[name] = value
 
-    upstream = requests.get(url, headers=headers, timeout=30)
+    upstream = requests.request(request.method, url, headers=headers, data=request.get_data(), timeout=30)
     response_headers = {
         name: value for name, value in upstream.headers.items()
         if name.lower() in ('content-type', 'cache-control')
@@ -28,8 +28,8 @@ def _proxy(resource, suffix):
     return Response(upstream.content, status=upstream.status_code, headers=response_headers)
 
 
-@v3_proxy_bp.route('/api/v3/certificates', defaults={'suffix': ''}, methods=['GET'], strict_slashes=False)
-@v3_proxy_bp.route('/api/v3/certificates/<path:suffix>', methods=['GET'], strict_slashes=False)
+@v3_proxy_bp.route('/api/v3/certificates', defaults={'suffix': ''}, methods=['GET', 'POST'], strict_slashes=False)
+@v3_proxy_bp.route('/api/v3/certificates/<path:suffix>', methods=['GET', 'POST'], strict_slashes=False)
 def certificates_proxy(suffix):
     return _proxy('certificates', suffix)
 

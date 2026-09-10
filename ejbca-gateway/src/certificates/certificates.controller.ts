@@ -1,6 +1,7 @@
 import { Body, Controller, Delete, Get, Headers, Param, Patch, Post, Query } from '@nestjs/common';
 import { RequirePermission } from '../common/permission.guard';
 import { parseCertificateListQuery, type CertificateListQueryInput } from './dtos/certificate-list.query';
+import { parseCertificateEnrollmentRequest } from './dtos/certificate-enrollment.request';
 import { CertificatesService } from './certificates.service';
 
 @Controller('certificates')
@@ -34,7 +35,9 @@ export class CertificatesController {
 
   @Post()
   @RequirePermission('write:certificates')
-  create(@Body() body: Record<string, unknown>, @Headers('idempotency-key') key?: string) { return this.service.issue(body, key); }
+  create(@Body() body: Record<string, unknown>, @Headers('idempotency-key') key?: string) {
+    return this.service.issue(parseCertificateEnrollmentRequest(body), key);
+  }
 
   @Patch(':id')
   rename(@Param('id') _id: string, @Body() _body: unknown) { return this.service.removed(); }

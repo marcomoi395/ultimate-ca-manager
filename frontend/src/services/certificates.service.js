@@ -24,8 +24,12 @@ export const certificatesService = {
     return apiClient.patch(`/certificates/${id}`, { descr })
   },
 
-  async revoke(id, reason) {
-    return apiClient.post(`/certificates/${id}/revoke`, { reason })
+  async revoke(id, { issuer, reason = 'UNSPECIFIED' }) {
+    return apiClient.post(
+      `/certificates/${id}/revoke`,
+      { issuer, reason },
+      { apiVersion: 'v3', headers: { 'Idempotency-Key': crypto.randomUUID() } }
+    )
   },
 
   async unhold(id) {

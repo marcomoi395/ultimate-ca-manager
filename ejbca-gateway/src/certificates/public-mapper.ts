@@ -25,7 +25,9 @@ function toPem(value: unknown): string | null {
   if (typeof value !== 'string' || !value) return null;
   if (value.includes('-----BEGIN CERTIFICATE-----')) return value;
   try {
-    const bytes = Uint8Array.from(atob(value), (character) => character.charCodeAt(0));
+    const decoded = atob(value);
+    if (decoded.includes('-----BEGIN CERTIFICATE-----')) return decoded;
+    const bytes = Uint8Array.from(decoded, (character) => character.charCodeAt(0));
     let binary = '';
     for (const byte of bytes) binary += String.fromCharCode(byte);
     const base64 = btoa(binary).match(/.{1,64}/g)?.join('\n') ?? '';
@@ -35,13 +37,23 @@ function toPem(value: unknown): string | null {
   }
 }
 
-function normalizeStatus(value: unknown, validTo: string | null, revokedAt: string | null): CertificatePublicData['status'] {
+function normalizeStatus(value: unknown, validTo: string | null): CertificatePublicData['status'] {
   const status = String(value ?? '').toUpperCase();
-  if (revokedAt || status.includes('REVOK')) return 'revoked';
+  if (status.includes('REVOK')) return 'revoked';
   const expiry = validTo ? Date.parse(validTo) : Number.NaN;
   if (!Number.isNaN(expiry) && expiry <= Date.now()) return 'expired';
   if (!Number.isNaN(expiry) && expiry <= Date.now() + 30 * 86400000) return 'expiring';
   return 'valid';
+}
+
+function toDecimalSerial(value: unknown): string | null {
+  const serial = asString(value);
+  if (!serial) return null;
+  try {
+    return BigInt(`0x${serial.replace(/^0x/i, '')}`).toString(10);
+  } catch {
+    return serial;
+  }
 }
 
 export function mapCertificatePublicData(record: Record<string, unknown>): CertificatePublicData {
@@ -50,12 +62,14 @@ export function mapCertificatePublicData(record: Record<string, unknown>): Certi
   const issuer = asString(record.issuer ?? record.issuer_dn ?? record.issuerDN);
   const validFrom = asIsoDate(record.valid_from ?? record.validFrom ?? record.notBefore);
   const validTo = asIsoDate(record.valid_to ?? record.validTo ?? record.expireDate ?? record.notAfter);
-  const revokedAt = asIsoDate(record.revoked_at ?? record.revokedAt ?? (Number(record.revocationDate) > 0 ? record.revocationDate : null));
+  const historicalRevokedAt = asIsoDate(record.revoked_at ?? record.revokedAt ?? (Number(record.revocationDate) > 0 ? record.revocationDate : null));
   const pem = toPem(record.pem ?? record.base64Cert);
   const remaining = validTo ? Math.ceil((Date.parse(validTo) - Date.now()) / 86400000) : null;
   const san = asString(record.subjectAltName ?? record.subject_alt_name);
   const fingerprint = asString(record.fingerprint);
-  const status = normalizeStatus(record.status ?? record.certificate_status, validTo, revokedAt);
+  const status = normalizeStatus(record.status ?? record.certificate_status, validTo);
+  const revokedAt = status === 'revoked' ? historicalRevokedAt : null;
+  const revokeReason = status === 'revoked' ? record.revocationReason ?? null : null;
 
   return {
     id: serial,
@@ -70,13 +84,14 @@ export function mapCertificatePublicData(record: Record<string, unknown>): Certi
     not_valid_after: validTo,
     revoked: status === 'revoked',
     revoked_at: revokedAt,
-    revoke_reason: record.revocationReason ?? null,
+    revoke_reason: revokeReason,
     pem,
     thumbprint_sha1: fingerprint,
     ski: asString(record.subjectKeyId ?? record.ski),
-    aki: asString(record.authorityKeyId ?? record.aki),
+    serial_number_decimal: record.serialNumber !== undefined
+      ? toDecimalSerial(record.serialNumber)
+      : asString(record.serial_number_decimal),
     san_combined: san,
-    serial_number_decimal: asString(record.serialNumber),
     days_remaining: remaining,
     source: asString(record.source) ?? 'ejbca',
     imported_from: asString(record.imported_from),
