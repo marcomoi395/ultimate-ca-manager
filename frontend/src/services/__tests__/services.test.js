@@ -179,6 +179,26 @@ describe('certificatesService', () => {
     expect(mockApiClient.post).toHaveBeenCalledWith('/certificates', data)
   })
 
+  it('enroll → POST /certificates through v3 gateway with an idempotency key', async () => {
+    const data = {
+      certificate_request: '-----BEGIN CERTIFICATE REQUEST-----...',
+      certificate_profile_name: 'TLS',
+      end_entity_profile_name: 'Default',
+      certificate_authority_name: 'ManagementCA',
+      username: 'enrollment-user',
+      password: 'enrollment-password',
+    }
+    await certificatesService.enroll(data)
+    expect(mockApiClient.post).toHaveBeenCalledWith(
+      '/certificates',
+      data,
+      expect.objectContaining({
+        apiVersion: 'v3',
+        headers: expect.objectContaining({ 'Idempotency-Key': expect.any(String) }),
+      }),
+    )
+  })
+
   it('revoke → POST v3 with issuer and idempotency key', async () => {
     await certificatesService.revoke('serial-1', {
       issuer: 'CN=ManagementCA',

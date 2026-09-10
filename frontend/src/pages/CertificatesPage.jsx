@@ -10,7 +10,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { 
   Certificate, Download, Trash, X, Info,
   CheckCircle, Warning, Clock, ArrowClockwise, LinkBreak, Star, ArrowsLeftRight,
-  PencilSimple
+  PencilSimple, UploadSimple
 } from '@phosphor-icons/react'
 import {
   ResponsiveLayout, ResponsiveDataTable, Badge, Button, HelpCard,
@@ -23,6 +23,7 @@ import { usePermission, useRecentHistory, useFavorites, useWebSocket, usePersist
 import { extractCN, cn, downloadBlob } from '../lib/utils'
 import { useCertificateColumns } from './certificates/useCertificateColumns'
 import { UploadKeyModal } from './certificates/UploadKeyModal'
+import { EnrollCertificateModal } from './certificates/EnrollCertificateModal'
 
 // i18n keys for known certificate issuance sources (labelKey pattern: store the
 // KEY at module level, resolve with t() in the component). Options are built
@@ -66,6 +67,7 @@ export default function CertificatesPage() {
   const [showKeyModal, setShowKeyModal] = useState(false)
   const [showCompareModal, setShowCompareModal] = useState(false)
   const [exportRowCert, setExportRowCert] = useState(null)
+  const [showEnrollModal, setShowEnrollModal] = useState(false)
   
   // Pagination
   const [page, setPage] = useState(1)
@@ -275,6 +277,19 @@ export default function CertificatesPage() {
       setSelectedCert(null)
     } catch (error) {
       showError(error.message || t('common.operationFailed'))
+    }
+  }
+
+  const handleEnroll = async (payload) => {
+    try {
+      muteToasts()
+      const response = await certificatesService.enroll(payload)
+      const enrollment = response?.data || response
+      showSuccess(t('notifications.certificateIssued', { name: enrollment?.serial_number || '' }))
+      await loadData()
+    } catch (error) {
+      showError(error.message || t('common.operationFailed'))
+      throw error
     }
   }
 
@@ -628,6 +643,18 @@ export default function CertificatesPage() {
           toolbarFilters={filters}
           toolbarActions={
             <div className="flex items-center gap-2">
+              {canWrite('certificates') && (
+                <Button
+                  type="button"
+                  size={isMobile ? 'lg' : 'sm'}
+                  onClick={() => setShowEnrollModal(true)}
+                  aria-label={t('certificates.issueCertificate')}
+                  className={isMobile ? 'w-11 h-11 p-0' : undefined}
+                >
+                  <UploadSimple size={isMobile ? 22 : 14} weight="bold" />
+                  {!isMobile && t('certificates.issueCertificate')}
+                </Button>
+              )}
               {!isMobile && (
                 <Button type="button" size="sm" variant="secondary" onClick={() => setShowCompareModal(true)}>
                   <ArrowsLeftRight size={14} />
@@ -651,6 +678,14 @@ export default function CertificatesPage() {
         />
       </ResponsiveLayout>
 
+
+      <EnrollCertificateModal
+        open={showEnrollModal}
+        onOpenChange={setShowEnrollModal}
+        cas={cas}
+        onSubmit={handleEnroll}
+        t={t}
+      />
 
       {/* Upload Private Key Modal */}
       <UploadKeyModal

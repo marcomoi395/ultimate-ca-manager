@@ -20,6 +20,14 @@ export const certificatesService = {
     return apiClient.post('/certificates', data)
   },
 
+  async enroll(data) {
+    return apiClient.post(
+      '/certificates',
+      data,
+      { apiVersion: 'v3', headers: { 'Idempotency-Key': crypto.randomUUID() } },
+    )
+  },
+
   async rename(id, descr) {
     return apiClient.patch(`/certificates/${id}`, { descr })
   },

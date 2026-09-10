@@ -18,8 +18,8 @@ test.describe('Certificates', () => {
     await expect(page.locator('table thead')).toBeVisible({ timeout: 10000 })
   })
 
-  test('does not expose issue or import actions', async ({ page }) => {
-    await expect(page.getByRole('button', { name: /issue certificate/i })).toHaveCount(0)
+  test('has direct CSR enrollment action without the legacy import action', async ({ page }) => {
+    await expect(page.getByRole('button', { name: /issue certificate/i })).toBeVisible()
     await expect(page.getByRole('button', { name: /^import$/i })).toHaveCount(0)
   })
 
