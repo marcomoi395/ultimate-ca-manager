@@ -1,38 +1,48 @@
 import { describe, expect, it } from 'bun:test';
-import { parseCertificateEnrollmentRequest } from '../src/certificates/dtos/certificate-enrollment.request';
+import {
+  parseCertificateEnrollmentRequest,
+  toClientKeyEnrollmentRequest,
+} from '../src/certificates/dtos/certificate-enrollment.request';
+import { certificateRequestPem } from './fixtures/certificate-request';
 
 const valid = {
-  certificate_request: 'Y3Ny',
+  certificate_request: certificateRequestPem,
   certificate_profile_name: 'TLS',
   end_entity_profile_name: 'Default',
-  certificate_authority_name: 'Root CA',
+  certificate_authority_name: 'ManagementCA',
   username: 'enroll-user',
   password: 'secret',
-  account_binding_id: '1234567890',
-  include_chain: true,
-  email: 'john.doe@example.com',
-  response_format: 'DER',
-  subject_dn: 'CN=John Doe,C=SE',
-  extension_data: [],
-  custom_data: [],
-  start_time: '2023-06-15 14:07:09',
-  end_time: '2023-06-16 14:07:09',
 };
 
 describe('certificate enrollment request', () => {
-  it('accepts the verified EJBCA payload', () => {
-    expect(parseCertificateEnrollmentRequest(valid)).toEqual(valid);
+  it('maps an external PKCS#10 request to the verified EJBCA client-key contract', async () => {
+    const request = parseCertificateEnrollmentRequest(valid);
+
+    await expect(toClientKeyEnrollmentRequest(request)).resolves.toEqual({
+      certificate_request: expect.any(String),
+      certificate_request_type: 'PKCS10',
+      include_chain: true,
+      response_format: 'DER',
+      end_entity: {
+        username: 'enroll-user',
+        password: 'secret',
+        subject_dn: 'CN=import.example.test,OU=Gateway,O=UCM,C=VN',
+        ca_name: 'ManagementCA',
+        certificate_profile_name: 'TLS',
+        end_entity_profile_name: 'Default',
+        token: 'USERGENERATED',
+        status: 'NEW',
+      },
+    });
   });
 
-  it('rejects missing credentials and enrollment fields', () => {
+  it('rejects missing enrollment fields', () => {
     expect(() => parseCertificateEnrollmentRequest({ ...valid, password: '' })).toThrow('password is required');
     expect(() => parseCertificateEnrollmentRequest({ ...valid, certificate_request: undefined })).toThrow('certificate_request is required');
   });
 
-  it('rejects invalid optional fields', () => {
+  it('rejects unsupported response configuration', () => {
     expect(() => parseCertificateEnrollmentRequest({ ...valid, include_chain: 'true' })).toThrow('include_chain must be a boolean');
-    expect(() => parseCertificateEnrollmentRequest({ ...valid, response_format: 'P12' })).toThrow('response_format must be DER or PEM');
-    expect(() => parseCertificateEnrollmentRequest({ ...valid, extension_data: {} })).toThrow('extension_data must be an array');
-    expect(() => parseCertificateEnrollmentRequest({ ...valid, email: 42 })).toThrow('email must be a string');
+    expect(() => parseCertificateEnrollmentRequest({ ...valid, response_format: 'PEM' })).toThrow('response_format must be DER');
   });
 });

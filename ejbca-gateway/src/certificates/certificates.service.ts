@@ -3,6 +3,10 @@ import { CertificateWriteInfrastructure } from './write-infrastructure';
 import { EjbcaResourceAdapter } from '../integrations/ejbca/resource-adapter';
 import { mapCertificatePublicData } from './public-mapper';
 import type { CertificateListQuery } from './dtos/certificate-list.query';
+import {
+  toClientKeyEnrollmentRequest,
+  type CertificateEnrollmentRequest,
+} from './dtos/certificate-enrollment.request';
 type CertificateReader = (query: CertificateListQuery) => Promise<unknown>;
 
 const SEARCH_PAGE_SIZE = 100;
@@ -117,13 +121,15 @@ export class CertificatesService {
   exportFile(): Promise<never> {
     throw new NotImplementedException('Certificate export through the EJBCA adapter is not implemented');
   }
-  async issue(body: unknown, key?: string): Promise<unknown> {
+  async issue(body: CertificateEnrollmentRequest, key?: string): Promise<unknown> {
     const claim = this.writes.claim(key, JSON.stringify(body));
     if (claim.status === 'REPLAY') return claim.response;
     if (claim.status === 'CONFLICT') return this.writes.conflict();
-    const result = this.publicWriteResult(await this.adapter!.issueCertificate(body));
+
+    const enrollment = await toClientKeyEnrollmentRequest(body);
+    const result = this.publicWriteResult(await this.adapter!.issueCertificate(enrollment));
     this.writes.saveResponse(key, result);
-    this.writes.audit({ actor_id: 'unknown', action: 'certificate.issue', correlation_id: 'unknown', outcome: 'success', metadata: {} });
+    this.writes.audit({ actor_id: 'unknown', action: 'certificate.issue', correlation_id: 'unknown', outcome: 'success', metadata: { serial: result.serial_number } });
     return result;
   }
 
@@ -149,10 +155,29 @@ export class CertificatesService {
     return result;
   }
 
-  private publicWriteResult(result: unknown): Record<string, unknown> {
-    if (!result || typeof result !== 'object') return { status: 'success' };
+  private publicWriteResult(result: unknown): {
+    certificate: string;
+    certificate_chain: string[];
+    serial_number: string;
+    response_format: 'DER';
+  } {
+    if (!result || typeof result !== 'object') {
+      throw new BadGatewayException('EJBCA enrollment did not return a certificate');
+    }
     const value = result as Record<string, unknown>;
-    return Object.fromEntries(Object.entries(value).filter(([key]) => !/(certificate|private|password|token|csr)/i.test(key)));
+    if (typeof value.certificate !== 'string' || typeof value.serial_number !== 'string' || value.response_format !== 'DER') {
+      throw new BadGatewayException('EJBCA enrollment returned an invalid certificate response');
+    }
+    const certificate_chain = value.certificate_chain;
+    if (certificate_chain !== undefined && (!Array.isArray(certificate_chain) || certificate_chain.some((certificate) => typeof certificate !== 'string'))) {
+      throw new BadGatewayException('EJBCA enrollment returned an invalid certificate chain');
+    }
+    return {
+      certificate: value.certificate,
+      certificate_chain: certificate_chain ?? [],
+      serial_number: value.serial_number,
+      response_format: 'DER',
+    };
   }
 
   lint(_id?: string, _profile?: string): Promise<never> { return this.removed(); }

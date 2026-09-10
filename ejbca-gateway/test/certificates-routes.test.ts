@@ -1,5 +1,6 @@
 import { GoneException } from '@nestjs/common';
 import { describe, expect, it } from 'bun:test';
+import { certificateRequestPem } from './fixtures/certificate-request';
 import { CertificatesController } from '../src/certificates/certificates.controller';
 describe('certificate routes', () => {
   it('does not forward certificate mutations to another version', async () => {
@@ -14,7 +15,14 @@ describe('certificate routes', () => {
     } as never;
     const controller = new CertificatesController(service);
 
-    await controller.create({ cn: 'example.test', ca_id: 'ca-1' });
+    await controller.create({
+      certificate_request: certificateRequestPem,
+      certificate_profile_name: 'TLS',
+      end_entity_profile_name: 'Default',
+      certificate_authority_name: 'ManagementCA',
+      username: 'enroll-user',
+      password: 'secret',
+    });
     await controller.revoke('cert-1', { reason: 'cessation' });
     await controller.export('cert-1', { format: 'pem' });
     await controller.lint('cert-1', 'rfc5280');

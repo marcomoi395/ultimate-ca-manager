@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 import { CertificatesService } from '../src/certificates/certificates.service';
+import { certificateRequestPem } from './fixtures/certificate-request';
 
 describe('CertificatesService', () => {
   it('returns paginated public certificate data', async () => {
@@ -280,6 +281,48 @@ describe('CertificatesService', () => {
     ]);
     await expect(service.stats()).resolves.toEqual({
       total: 4, valid: 1, expiring: 1, expired: 1, revoked: 1, sources: ['ejbca', 'manual'],
+    });
+  });
+  it('enrolls an external CSR and returns only public certificate material', async () => {
+    const calls: unknown[] = [];
+    const service = new CertificatesService({
+      issueCertificate: async (body: unknown) => {
+        calls.push(body);
+        return {
+          certificate: 'DER_CERTIFICATE',
+          certificate_chain: ['DER_ISSUER'],
+          serial_number: '00AF12',
+          response_format: 'DER',
+          password: 'must-not-leak',
+        };
+      },
+    } as never);
+
+    const result = await service.issue({
+      certificate_request: certificateRequestPem,
+      certificate_profile_name: 'TLS',
+      end_entity_profile_name: 'Default',
+      certificate_authority_name: 'ManagementCA',
+      username: 'enroll-user',
+      password: 'secret',
+    });
+
+    expect(calls).toEqual([expect.objectContaining({
+      certificate_request: expect.any(String),
+      certificate_request_type: 'PKCS10',
+      include_chain: true,
+      response_format: 'DER',
+      end_entity: expect.objectContaining({
+        username: 'enroll-user',
+        password: 'secret',
+        subject_dn: 'CN=import.example.test,OU=Gateway,O=UCM,C=VN',
+      }),
+    })]);
+    expect(result).toEqual({
+      certificate: 'DER_CERTIFICATE',
+      certificate_chain: ['DER_ISSUER'],
+      serial_number: '00AF12',
+      response_format: 'DER',
     });
   });
 });

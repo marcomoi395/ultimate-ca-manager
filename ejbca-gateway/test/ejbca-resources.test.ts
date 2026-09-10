@@ -26,4 +26,33 @@ describe('EJBCA resource adapter', () => {
     await adapter.getRevocationStatus('CN=Example CA,O=Example', '00af12');
     expect(calls).toEqual([['/v1/certificate/CN%3DExample%20CA%2CO%3DExample/00af12/revocationstatus']]);
   });
+
+  it('maps client-generated-key enrollment to the verified EJBCA endpoint', async () => {
+    const calls: unknown[][] = [];
+    const adapter = new EjbcaResourceAdapter({ request: async (...args) => { calls.push(args); return { ok: true }; } });
+    const body = {
+      certificate_request: 'DER_BASE64_CSR',
+      certificate_request_type: 'PKCS10',
+      include_chain: true,
+      response_format: 'DER',
+      end_entity: {
+        username: 'enroll-user',
+        password: 'secret',
+        subject_dn: 'CN=import.example.test',
+        ca_name: 'ManagementCA',
+        certificate_profile_name: 'TLS',
+        end_entity_profile_name: 'Default',
+        token: 'USERGENERATED',
+        status: 'NEW',
+      },
+    };
+
+    await adapter.issueCertificate(body);
+
+    expect(calls).toEqual([['/v1/certificate/enroll', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    }]]);
+  });
 });

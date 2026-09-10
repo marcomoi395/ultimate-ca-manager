@@ -36,7 +36,7 @@ describe('endpoint response contracts', () => {
     expect(CERTIFICATE_ROUTE_PARITY).toEqual({
       readPermission: 'read:certificates',
       writes: {
-        'POST /certificates': { permission: 'write:certificates', operation: 'POST /v1/certificate/pkcs10enroll' },
+        'POST /certificates': { permission: 'write:certificates', operation: 'POST /v1/certificate/enroll' },
         'POST /certificates/:id/revoke': { permission: 'delete:certificates', operation: 'PUT /v1/certificate/:issuer/:serial/revoke' },
         'POST /certificates/:id/unhold': { permission: 'write:certificates', operation: 'PUT /v1/certificate/:issuer/:serial/revoke?reason=REMOVE_FROM_CRL' },
       },
