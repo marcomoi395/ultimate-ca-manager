@@ -138,7 +138,9 @@ export class CertificatesService {
     if (claim.status === 'REPLAY') return claim.response;
     if (claim.status === 'CONFLICT') return this.writes.conflict();
     if (!body.issuer) throw new NotFoundException(`Certificate ${id} issuer not found`);
-    const result = this.publicWriteResult(await this.adapter!.revokeCertificate(body.issuer, id, body.reason ?? 'UNSPECIFIED'));
+    const reason = body.reason ?? 'UNSPECIFIED';
+    await this.adapter!.revokeCertificate(body.issuer, id, reason);
+    const result = { serial_number: id, revoked: true, reason };
     this.writes.saveResponse(key, result);
     this.writes.audit({ actor_id: 'unknown', action: 'certificate.revoke', correlation_id: 'unknown', outcome: 'success', metadata: { serial: id } });
     return result;

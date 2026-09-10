@@ -325,4 +325,15 @@ describe('CertificatesService', () => {
       response_format: 'DER',
     });
   });
+  it('returns a public revoke result when EJBCA responds with an empty body', async () => {
+    const service = new CertificatesService({
+      revokeCertificate: async () => null,
+    } as never);
+
+    await expect(service.revoke('00AF12', { issuer: 'CN=ManagementCA' })).resolves.toEqual({
+      serial_number: '00AF12',
+      revoked: true,
+      reason: 'UNSPECIFIED',
+    });
+  });
 });
