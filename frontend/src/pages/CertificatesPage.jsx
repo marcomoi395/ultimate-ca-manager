@@ -6,23 +6,21 @@
  */
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useParams, useNavigate, useLocation } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { 
-  Certificate, Download, Trash, X, Plus, Info,
-  CheckCircle, Warning, UploadSimple, Clock, ArrowClockwise, LinkBreak, Star, ArrowsLeftRight,
+  Certificate, Download, Trash, X, Info,
+  CheckCircle, Warning, Clock, ArrowClockwise, LinkBreak, Star, ArrowsLeftRight,
   PencilSimple
 } from '@phosphor-icons/react'
 import {
-  ResponsiveLayout, ResponsiveDataTable, Badge, Button, Modal, HelpCard,
+  ResponsiveLayout, ResponsiveDataTable, Badge, Button, HelpCard,
   CertificateDetails, CertificateCompareModal
 } from '../components'
 import { ExportModal } from '../components/ExportModal'
-import { SmartImportModal } from '../components/SmartImport'
 import { certificatesService, casService, truststoreService } from '../services'
 import { useNotification, useMobile, useWindowManager } from '../contexts'
 import { usePermission, useRecentHistory, useFavorites, useWebSocket, usePersistedState } from '../hooks'
 import { extractCN, cn, downloadBlob } from '../lib/utils'
-import { IssueCertificateForm } from './certificates/IssueCertificateForm'
 import { useCertificateColumns } from './certificates/useCertificateColumns'
 import { UploadKeyModal } from './certificates/UploadKeyModal'
 
@@ -52,7 +50,6 @@ export default function CertificatesPage() {
   const { t } = useTranslation()
   const { id: urlCertId } = useParams()
   const navigate = useNavigate()
-  const location = useLocation()
   const { isMobile } = useMobile()
   const { openWindow } = useWindowManager()
   const { addToHistory } = useRecentHistory('certificates')
@@ -66,9 +63,6 @@ export default function CertificatesPage() {
   
   // Selection
   const [selectedCert, setSelectedCert] = useState(null)
-  const [showIssueModal, setShowIssueModal] = useState(false)
-  const [issueInitialData, setIssueInitialData] = useState(null)
-  const [showImportModal, setShowImportModal] = useState(false)
   const [showKeyModal, setShowKeyModal] = useState(false)
   const [showCompareModal, setShowCompareModal] = useState(false)
   const [exportRowCert, setExportRowCert] = useState(null)
@@ -103,7 +97,7 @@ export default function CertificatesPage() {
     else setFilterSource([])
   }, [])
   
-  const { showSuccess, showError, showConfirm, showPrompt, showWarning } = useNotification()
+  const { showSuccess, showError, showConfirm, showPrompt } = useNotification()
   const { canWrite, canDelete, hasPermission } = usePermission()
   const { muteToasts } = useWebSocket()
 
@@ -122,17 +116,6 @@ export default function CertificatesPage() {
     return () => window.removeEventListener('ucm:data-changed', handler)
   }, [])
 
-  // Handle re-key prefill from CSRs page navigation
-  useEffect(() => {
-    if (location.state?.prefill && location.state?.source === 'rekey') {
-      if (canWrite('certificates')) {
-        setIssueInitialData(location.state.prefill)
-        setShowIssueModal(true)
-      }
-      // Clear navigation state to prevent re-triggering on refresh
-      navigate(location.pathname, { replace: true, state: {} })
-    }
-  }, [location.state])
 
   const loadData = async () => {
     try {
@@ -651,29 +634,6 @@ export default function CertificatesPage() {
                   {t('common.compare') || 'Compare'}
                 </Button>
               )}
-              {canWrite('certificates') && (
-                isMobile ? (
-                  <>
-                    <Button type="button" size="lg" variant="secondary" onClick={() => setShowImportModal(true)} className="w-11 h-11 p-0">
-                      <UploadSimple size={22} weight="bold" />
-                    </Button>
-                    <Button type="button" size="lg" onClick={() => setShowIssueModal(true)} className="w-11 h-11 p-0">
-                      <Plus size={22} weight="bold" />
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <Button type="button" size="sm" variant="secondary" onClick={() => setShowImportModal(true)}>
-                      <UploadSimple size={14} />
-                      {t('common.import')}
-                    </Button>
-                    <Button type="button" size="sm" onClick={() => setShowIssueModal(true)}>
-                      <Plus size={14} weight="bold" />
-                      {t('certificates.issueCertificate').split(' ')[0]}
-                    </Button>
-                  </>
-                )
-              )}
             </div>
           }
           sortable
@@ -688,48 +648,9 @@ export default function CertificatesPage() {
           }}
           emptyIcon={Certificate}
           emptyTitle={t('certificates.noCertificates')}
-          emptyDescription={t('certificates.issueCertificate')}
-          emptyAction={canWrite('certificates') && (
-            <Button type="button" onClick={() => setShowIssueModal(true)}>
-              <Plus size={16} /> {t('certificates.issueCertificate')}
-            </Button>
-          )}
         />
       </ResponsiveLayout>
 
-      {/* Issue Certificate Modal */}
-      <Modal
-        open={showIssueModal}
-        onOpenChange={(open) => {
-          setShowIssueModal(open)
-          if (!open) setIssueInitialData(null)
-        }}
-        title={t('certificates.issueCertificate')}
-        size="xl"
-      >
-        <IssueCertificateForm
-          cas={cas}
-          initialData={issueInitialData}
-          onSubmit={async (data) => {
-            try {
-              muteToasts()
-              const response = await certificatesService.create(data)
-              if (response?.data?.approval_required) {
-                showWarning(t('certificates.approvalRequired', { policy: response.data.policy_name }))
-              } else {
-                showSuccess(t('messages.success.create.certificate'))
-              }
-              setShowIssueModal(false)
-              setIssueInitialData(null)
-              loadData()
-            } catch (error) {
-              showError(error.message || t('common.operationFailed'))
-            }
-          }}
-          onCancel={() => { setShowIssueModal(false); setIssueInitialData(null) }}
-          t={t}
-        />
-      </Modal>
 
       {/* Upload Private Key Modal */}
       <UploadKeyModal
@@ -751,15 +672,6 @@ export default function CertificatesPage() {
         initialCert={selectedCert}
       />
 
-      {/* Smart Import Modal */}
-      <SmartImportModal
-        isOpen={showImportModal}
-        onClose={() => setShowImportModal(false)}
-        onImportComplete={() => {
-          setShowImportModal(false)
-          loadData()
-        }}
-      />
 
       {/* Row Export Modal */}
       <ExportModal

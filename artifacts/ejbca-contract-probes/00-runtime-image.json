@@ -1,9 +1,4 @@
 {
-  "container": "ucm-ejbca",
-  "image": "keyfactor/ejbca-ce@sha256:183b86af44b9b13e7cc8912c868f635aeb8dba6bf056ccbd4683b17626964d0a",
-  "container_image_id": "sha256:183b86af44b9b13e7cc8912c868f635aeb8dba6bf056ccbd4683b17626964d0a",
-  "repo_digest": "keyfactor/ejbca-ce@sha256:183b86af44b9b13e7cc8912c868f635aeb8dba6bf056ccbd4683b17626964d0a",
-  "certificate_status": {"status":"OK","version":"1.0","revision":"EJBCA 9.3.7 Community (afce321eed98ab06bd8cc78e89fc50b73a5b8db4)"},
-  "ca_status": {"status":"OK","version":"1.0","revision":"EJBCA 9.3.7 Community (afce321eed98ab06bd8cc78e89fc50b73a5b8db4)"},
-  "api_base_url": "https://127.0.0.1:8444/ejbca/ejbca-rest-api"
+  "output": "",
+  "exit_code": 1
 }

@@ -18,10 +18,9 @@ test.describe('Certificates', () => {
     await expect(page.locator('table thead')).toBeVisible({ timeout: 10000 })
   })
 
-  test('has action buttons', async ({ page }) => {
-    // Certificates page has: Help, status filter, CA filter, Compare, Import, Issue
-    const buttons = page.locator('button')
-    expect(await buttons.count()).toBeGreaterThanOrEqual(4)
+  test('does not expose issue or import actions', async ({ page }) => {
+    await expect(page.getByRole('button', { name: /issue certificate/i })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: /^import$/i })).toHaveCount(0)
   })
 
   test('has help button', async ({ page }) => {
