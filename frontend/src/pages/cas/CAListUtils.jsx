@@ -1,7 +1,7 @@
 /**
  * CAs Page — shared helpers and small reusable components
  */
-import { Certificate, Clock } from '@phosphor-icons/react'
+import { Clock } from '@phosphor-icons/react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '../../lib/utils'
 import { getAppTimezone } from '../../stores/timezoneStore'
@@ -38,15 +38,7 @@ export function CAInfoLine({ ca, isMobile, t }) {
   const expiry = formatExpiry(ca.valid_to || ca.not_after, t)
   return (
     <div className="flex items-center gap-2 text-2xs text-text-tertiary flex-wrap">
-      {ca.subject && (
-        <span className="truncate max-w-[200px]">{ca.subject.split(',')[0]}</span>
-      )}
-      <span className="flex items-center gap-1">
-        <Certificate size={11} weight="duotone" className="text-accent-primary" />
-        <span className="font-semibold text-text-secondary">
-          {t('cas.certificateCount', { count: ca.certs || 0 })}
-        </span>
-      </span>
+      {ca.subject && <span className="truncate max-w-[200px]">{ca.subject.split(',')[0]}</span>}
       {expiry && (
         <>
           <span className="text-border">·</span>

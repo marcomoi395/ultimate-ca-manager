@@ -1,7 +1,7 @@
 /**
  * CAs Page — columns/kanban view (View B)
  */
-import { Certificate, ShieldCheck } from '@phosphor-icons/react'
+import { ShieldCheck } from '@phosphor-icons/react'
 import { CATypeIcon } from '../../components'
 import { cn } from '../../lib/utils'
 import { formatExpiry, StatusBadge, HsmBadge, OfflineBadge } from './CAListUtils'
@@ -106,10 +106,6 @@ function ColumnHeader({ ca, selectedId, onSelect, isMobile, t }) {
       <div className="mt-1 ml-7">
         <div className="flex items-center gap-2 text-2xs text-text-tertiary">
           <span className="flex items-center gap-1">
-            <Certificate size={11} weight="duotone" className="text-accent-primary" />
-            <span className="font-semibold text-text-secondary">{ca.certs || 0}</span>
-          </span>
-          <span className="flex items-center gap-1">
             <ShieldCheck size={11} weight="duotone" className="text-text-tertiary" />
             <span className="text-text-secondary">{ca.children?.length || 0} int.</span>
           </span>
@@ -150,10 +146,6 @@ function ColumnChildCard({ ca, selectedId, onSelect, isMobile, t, isOrphan, dept
         <OfflineBadge ca={ca} t={t} />
         </div>
         <div className="mt-1 ml-7 flex items-center gap-2 text-2xs text-text-tertiary">
-          <span className="flex items-center gap-1">
-            <Certificate size={10} weight="duotone" className="text-accent-primary" />
-            <span className="font-semibold text-text-secondary">{ca.certs || 0}</span>
-          </span>
           {expiry && (
             <>
               <span className="text-border">·</span>

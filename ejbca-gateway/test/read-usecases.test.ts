@@ -8,7 +8,6 @@ describe('read facade use cases', () => {
     const calls: unknown[][] = [];
     const adapter = {
       listCas: async (...args: unknown[]) => { calls.push(args); return [{ id: 1, name: 'Root', subject_dn: 'CN=Root', issuer_dn: 'CN=Root', expiration_date: '2036-09-05T01:57:37Z', external: false }]; },
-      getCa: async (id: string) => ({ resource: 'ca', id }),
       request: async (path: string) => { calls.push([path]); return { path }; },
     } as never;
     const service = new CasService(adapter);
@@ -30,15 +29,45 @@ describe('read facade use cases', () => {
     });
     expect(calls[0]).toEqual([expect.any(URLSearchParams)]);
     expect((calls[0][0] as URLSearchParams).toString()).toContain('page=2');
-    expect(await service.certificates('ca/1', { page: 1, limit: 5 })).toEqual({ path: '/v1/ca/ca%2F1/certificate?page=1&limit=5' });
-    expect(await service.templates('ca/1')).toEqual({ path: '/v1/ca/ca%2F1/certificateprofile' });
+  });
+
+  it('links intermediate CAs to a listed issuer CA', async () => {
+    const adapter = {
+      listCas: async () => ({ certificate_authorities: [
+        { id: 1, name: 'Root', subject_dn: 'CN=Root', issuer_dn: 'CN=Root' },
+        { id: 2, name: 'Intermediate', subject_dn: 'CN=Intermediate', issuer_dn: 'CN=Root' },
+      ] }),
+    } as never;
+    const result = await new CasService(adapter).list({ page: 1, limit: 20 });
+    expect(result).toMatchObject({
+      data: [
+        expect.objectContaining({ id: 1, parent_id: null, type: 'root' }),
+        expect.objectContaining({ id: 2, parent_id: 1, type: 'intermediate' }),
+      ],
+    });
+  });
+  it('resolves CA detail from the EJBCA CA list by numeric id', async () => {
+    const adapter = {
+      listCas: async () => ({ certificate_authorities: [
+        { id: 1626169540, name: 'test', subject_dn: 'CN=test', issuer_dn: 'CN=test', expiration_date: '2027-09-08T03:46:47Z', external: false },
+      ] }),
+    } as never;
+    await expect(new CasService(adapter).getById('1626169540')).resolves.toEqual(expect.objectContaining({
+      id: 1626169540,
+      common_name: 'test',
+      subject: 'CN=test',
+      is_root: true,
+    }));
+  });
+
+  it('returns not found when a CA id is absent from the EJBCA list', async () => {
+    const adapter = { listCas: async () => [] } as never;
+    await expect(new CasService(adapter).getById('missing')).rejects.toThrow('CA not found');
   });
 
   it('normalizes EJBCA CA list responses for the v2 data envelope', async () => {
     const adapter = {
       listCas: async () => ({ certificate_authorities: [{ id: 'ca-1', name: 'Imported' }], total: 1 }),
-      getCa: async () => null,
-      request: async () => null,
     } as never;
     await expect(new CasService(adapter).list({ page: 1, limit: 20 })).resolves.toEqual(expect.objectContaining({
       data: [expect.objectContaining({ id: 'ca-1', name: 'Imported' })],
@@ -47,7 +76,7 @@ describe('read facade use cases', () => {
   });
 
   it('rejects invalid CA pagination and sort order', async () => {
-    const adapter = { listCas: async () => [], getCa: async () => null, request: async () => null } as never;
+    const adapter = { listCas: async () => [] } as never;
     const service = new CasService(adapter);
     expect(() => parseCaListQuery({ page: '0' })).toThrow('Invalid pagination');
     expect(() => parseCaListQuery({ sort_order: 'latest' })).toThrow('Invalid sort order');
@@ -57,12 +86,11 @@ describe('read facade use cases', () => {
     });
   });
 
-  it('delegates detail reads to EJBCA', async () => {
+  it('delegates detail reads to the EJBCA CA list', async () => {
     const adapter = {
-      getCa: async (id: string) => ({ resource: 'ca', id }),
-      request: async (path: string) => ({ path }),
+      listCas: async () => [{ id: 'ca-1', name: 'Root', subject_dn: 'CN=Root', issuer_dn: 'CN=Root' }],
     } as never;
     const ca = await new CasService(adapter).getById('ca-1');
-    expect(ca).toEqual({ resource: 'ca', id: 'ca-1' });
+    expect(ca).toEqual(expect.objectContaining({ id: 'ca-1', common_name: 'Root' }));
   });
 });

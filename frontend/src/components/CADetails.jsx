@@ -33,7 +33,6 @@ import { Badge, CATypeIcon } from './Badge'
 import { Button } from './Button'
 import { CompactSection, CompactGrid, CompactField } from './DetailCard'
 import { CertificateExtensions } from './CertificateExtensions'
-import { CACrlSection } from './cas/CACrlSection'
 import { cn } from '../lib/utils'
 
 // Format date helper - delegates to shared util
@@ -115,11 +114,6 @@ export function CADetails({
           <div className="text-2xs text-text-tertiary">{t('common.signature')}</div>
           <div className="text-xs font-medium text-text-primary">{ca.signature_algorithm || ca.hash_algorithm || t('common.na')}</div>
         </div>
-        <div className="bg-tertiary-op50 rounded-lg p-2 text-center">
-          <Certificate size={16} className="mx-auto text-text-tertiary mb-1" />
-          <div className="text-2xs text-text-tertiary">{t('common.certificates')}</div>
-          <div className="text-xs font-medium text-text-primary">{ca.certs || 0}</div>
-        </div>
       </div>
 
       {/* Days Remaining Indicator */}
@@ -173,8 +167,6 @@ export function CADetails({
           </Badge>
           <span className="text-2xs text-text-tertiary">•</span>
           <span className="text-2xs text-text-secondary">{ca.key_type || t('common.na')}</span>
-          <span className="text-2xs text-text-tertiary">•</span>
-          <span className="text-2xs text-text-secondary">{ca.certs || 0} {t('common.certificatesShort')}</span>
         </div>
       )}
 
@@ -261,8 +253,6 @@ export function CADetails({
         </CompactSection>
       )}
 
-      {/* Revocation list — key-less/offline CA served from an external CRL (#302) */}
-      <CACrlSection ca={ca} />
 
       {/* X.509 Extensions */}
       <CertificateExtensions extensions={ca.extensions} defaultOpen={false} />

@@ -2,17 +2,16 @@
  * CAs Page — detail panel for selected CA (mobile slide-over)
  */
 import { useState } from 'react'
-import { Download, Trash, Certificate, Clock, ShieldWarning, ShieldCheck, PushPin, FileArrowDown, UploadSimple, ArrowsClockwise } from '@phosphor-icons/react'
+import { Download, Trash, Clock, ShieldWarning, PushPin, FileArrowDown, UploadSimple, ArrowsClockwise } from '@phosphor-icons/react'
 import {
   Badge, Button,
-  CompactSection, CompactGrid, CompactField, CompactStats,
+  CompactSection, CompactGrid, CompactField,
   CATypeIcon
 } from '../../components'
 import { ExportModal } from '../../components/ExportModal'
 import { TakeOfflineModal } from '../../components/cas/TakeOfflineModal'
 import { RestoreModal } from '../../components/cas/RestoreModal'
 import { ManageTemplatePinsModal } from '../../components/cas/ManageTemplatePinsModal'
-import { CACrlSection } from '../../components/cas/CACrlSection'
 import { UploadCACertModal } from './UploadCACertModal'
 import { casService } from '../../services'
 import { formatDate, downloadBlob } from '../../lib/utils'
@@ -127,16 +126,6 @@ export function CADetailsPanel({ ca, canWrite, canDelete, onExport, onDelete, t 
         </div>
       )}
 
-      {/* Stats */}
-      <CompactStats stats={[
-        { icon: Certificate, value: t('cas.certificateCount', { count: ca.certs || 0 }) },
-        { icon: Clock, value: ca.valid_to ? formatDate(ca.valid_to, 'short') : '—' },
-        ca.pending
-          ? { badge: t('cas.awaitingCertificate'), badgeVariant: 'warning' }
-          : ca.offline
-            ? { badge: t('cas.offline'), badgeVariant: 'warning' }
-            : { badge: ca.status, badgeVariant: ca.status === 'Active' ? 'success' : 'danger' }
-      ]} />
 
       {/* Export + Delete Actions */}
       <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
@@ -177,8 +166,6 @@ export function CADetailsPanel({ ca, canWrite, canDelete, onExport, onDelete, t 
         )}
       </div>
 
-      {/* Revocation list — key-less/offline CA served from an external CRL (#302) */}
-      <CACrlSection ca={ca} />
 
       {/* Subject Info */}
       <CompactSection title={t('common.subject')}>
@@ -194,9 +181,9 @@ export function CADetailsPanel({ ca, canWrite, canDelete, onExport, onDelete, t 
       {/* Key Info */}
       <CompactSection title={t('common.keyInformation')}>
         <CompactGrid>
-          <CompactField autoIcon="algorithm" label={t('common.algorithm')} value={ca.key_algorithm || 'RSA'} />
-          <CompactField autoIcon="keySize" label={t('common.keySize')} value={ca.key_size} />
-          <CompactField autoIcon="signature" label={t('common.signature')} value={ca.signature_algorithm} />
+          <CompactField autoIcon="algorithm" label={t('common.algorithm')} value={ca.key_algorithm || t('common.na')} />
+          <CompactField autoIcon="keySize" label={t('common.keySize')} value={ca.key_size || t('common.na')} />
+          <CompactField autoIcon="signature" label={t('common.signature')} value={ca.signature_algorithm || ca.hash_algorithm || t('common.na')} />
           {ca.uses_hsm && (
             <>
               <CompactField label={t('cas.create.hsmProvider')} value={ca.hsm_provider_name || '—'} />

@@ -46,8 +46,6 @@ const COMMANDS = [
   { id: 'ssh-certificates', labelKey: 'commands.nav.sshCertificates', icon: Terminal, path: '/ssh/certificates', categoryKey: 'commands.categories.navigation' },
   
   // Actions
-  { id: 'new-cert', labelKey: 'commands.actions.newCertificate', icon: Certificate, path: '/certificates', action: 'new', categoryKey: 'commands.categories.actions' },
-  { id: 'new-ca', labelKey: 'commands.actions.newCA', icon: ShieldCheck, path: '/cas', action: 'new', categoryKey: 'commands.categories.actions' },
   { id: 'upload-csr', labelKey: 'commands.actions.uploadCSR', icon: FileText, path: '/csrs', action: 'upload', categoryKey: 'commands.categories.actions' },
 ]
 

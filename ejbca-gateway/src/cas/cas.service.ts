@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { EjbcaResourceAdapter } from '../integrations/ejbca/resource-adapter';
 import type { CaListQuery } from './dtos/ca-list.query';
 
@@ -12,7 +12,7 @@ export class CasService {
     const result = await this.adapter.listCas(toQueryParams(query));
     const { items, total } = normalizeCaList(result);
     return {
-      data: items.map(toLegacyCa),
+      data: toLegacyCas(items),
       meta: {
         page: query.page,
         per_page: query.limit,
@@ -23,15 +23,10 @@ export class CasService {
   }
 
   async getById(id: string): Promise<unknown> {
-    return this.adapter.getCa(id);
-  }
-
-  certificates(id: string, query: CaListQuery): Promise<unknown> {
-    return this.adapter.request(`/v1/ca/${encodeURIComponent(id)}/certificate${toQueryString(query)}`);
-  }
-
-  templates(id: string): Promise<unknown> {
-    return this.adapter.request(`/v1/ca/${encodeURIComponent(id)}/certificateprofile`);
+    const { items } = normalizeCaList(await this.adapter.listCas());
+    const index = items.findIndex(item => String(item.id ?? '') === id);
+    if (index < 0) throw new NotFoundException('CA not found');
+    return toLegacyCas(items)[index];
   }
 }
 
@@ -40,7 +35,7 @@ function normalizeCaList(result: unknown): { items: CaRecord[]; total: number } 
     const items = result.filter((item): item is CaRecord => item !== null && typeof item === 'object' && !Array.isArray(item));
     return { items, total: items.length };
   }
-  if (result === null || typeof result !== 'object' || Array.isArray(result)) return { items: [], total: 0 };
+  if (result === null || typeof result !== 'object') return { items: [], total: 0 };
   const value = result as CaRecord;
   const rawItems = Array.isArray(value.certificate_authorities)
     ? value.certificate_authorities
@@ -49,9 +44,20 @@ function normalizeCaList(result: unknown): { items: CaRecord[]; total: number } 
   return { items, total: typeof value.total === 'number' ? value.total : items.length };
 }
 
-function toLegacyCa(ca: CaRecord): CaRecord {
+function toLegacyCas(cas: CaRecord[]): CaRecord[] {
+  const idsBySubject = new Map(
+    cas
+      .filter(ca => typeof ca.subject_dn === 'string' && ca.id !== undefined)
+      .map(ca => [ca.subject_dn as string, ca.id]),
+  );
+  return cas.map(ca => toLegacyCa(ca, idsBySubject));
+}
+
+function toLegacyCa(ca: CaRecord, idsBySubject: Map<string, unknown>): CaRecord {
   const subject = typeof ca.subject_dn === 'string' ? ca.subject_dn : typeof ca.subject === 'string' ? ca.subject : null;
   const issuer = typeof ca.issuer_dn === 'string' ? ca.issuer_dn : typeof ca.issuer === 'string' ? ca.issuer : null;
+  const isRoot = Boolean(subject && issuer && subject === issuer);
+  const parentId = !isRoot && issuer ? idsBySubject.get(issuer) ?? null : null;
   const commonName = typeof ca.name === 'string'
     ? ca.name
     : typeof ca.common_name === 'string'
@@ -59,7 +65,6 @@ function toLegacyCa(ca: CaRecord): CaRecord {
       : subject?.replace(/^CN=/, '').split(',')[0] ?? null;
   const validTo = dateOnly(ca.expiration_date ?? ca.valid_to ?? ca.expires);
   const validFrom = dateOnly(ca.creation_date ?? ca.valid_from ?? ca.issued);
-  const isRoot = Boolean(subject && issuer && subject === issuer);
   return {
     aia_ca_issuers_enabled: false, aia_ca_issuers_url: null, aia_ca_issuers_urls: [], caref: null,
     cdp_enabled: false, cdp_url: null, cdp_urls: [], certs: 0, common_name: commonName, country: null,
@@ -73,9 +78,9 @@ function toLegacyCa(ca: CaRecord): CaRecord {
     name: commonName, name_constraints_excluded: [], name_constraints_permitted: [], ocsp_enabled: false,
     ocsp_url: null, ocsp_urls: [], offline: false, offline_label: null, offline_mode: null,
     offline_reason: null, organization: null, organizational_unit: null, owner_group_id: null,
-    owner_group_name: null, parent_id: null, path_length: null, pem: null, pending: false,
+    owner_group_name: null, parent_id: parentId, path_length: null, pem: null, pending: false,
     policy_constraints_inhibit: null, policy_constraints_require: null, refid: ca.id ?? null,
-    serial: ca.serial_number ?? ca.serial ?? null, sia_enabled: false, sia_urls: [], ski: null, state: null,
+    serial: ca.serial_number ?? ca.serial ?? null, serial_number: ca.serial_number ?? ca.serial ?? null, sia_enabled: false, sia_urls: [], ski: null, state: null,
     status: validTo && validTo < new Date().toISOString().slice(0, 10) ? 'Expired' : 'Active', subject,
     type: isRoot ? 'root' : 'intermediate', url_slug: null, uses_hsm: false,
     valid_from: ca.creation_date ?? ca.valid_from ?? null, valid_to: ca.expiration_date ?? ca.valid_to ?? null,
@@ -96,9 +101,4 @@ function toQueryParams(query: CaListQuery): URLSearchParams {
   if (query.sortBy) params.set('sort_by', query.sortBy);
   if (query.sortOrder) params.set('sort_order', query.sortOrder);
   return params;
-}
-
-function toQueryString(query: CaListQuery): string {
-  const params = toQueryParams(query);
-  return params.size > 0 ? `?${params.toString()}` : '';
 }

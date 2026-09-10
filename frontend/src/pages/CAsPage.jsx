@@ -4,18 +4,13 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams, useParams, useNavigate } from 'react-router-dom'
-import { 
-  Certificate, UploadSimple, Clock, Plus, Crown, ShieldCheck, Columns, SquaresFour, List
-} from '@phosphor-icons/react'
-import {
-  Button, LoadingSpinner, MultiSelectFilter
-} from '../components'
-import { SmartImportModal } from '../components/SmartImport'
+import { Certificate, Clock, Crown, ShieldCheck, Columns, SquaresFour, List } from '@phosphor-icons/react'
+import { LoadingSpinner, MultiSelectFilter } from '../components'
 import { ResponsiveLayout } from '../components/ui/responsive'
 import { casService } from '../services'
 import { useNotification } from '../contexts'
 import { useWindowManager } from '../contexts/WindowManagerContext'
-import { usePermission, useModals, useRecentHistory, useWebSocket, usePersistedState } from '../hooks'
+import { usePermission, useRecentHistory, useWebSocket, usePersistedState } from '../hooks'
 import { useMobile } from '../contexts/MobileContext'
 import { extractData, cn, downloadBlob } from '../lib/utils'
 import { OrgView } from './cas/OrgView'
@@ -24,7 +19,6 @@ import { ListView } from './cas/ListView'
 import { CADetailsPanel } from './cas/CADetailsPanel'
 import { ManageTemplatePinsModal } from '../components/cas/ManageTemplatePinsModal'
 import { ChainRepairBar } from './cas/ChainRepairBar'
-import { CreateCAModal } from './cas/CreateCAModal'
 
 export default function CAsPage() {
   const { t } = useTranslation()
@@ -43,8 +37,6 @@ export default function CAsPage() {
   const [loading, setLoading] = useState(true)
   const [showPinsModal, setShowPinsModal] = useState(false)
   const [pinsModalCA, setPinsModalCA] = useState(null)
-  const { modals, open: openModal, close: closeModal } = useModals(['create'])
-  const [showImportModal, setShowImportModal] = useState(false)
   
   // Filter state
   const [filterType, setFilterType] = usePersistedState('ucm-filter-cas-type', [])
@@ -74,11 +66,6 @@ export default function CAsPage() {
 
   useEffect(() => {
     loadCAs()
-    if (searchParams.get('action') === 'create') {
-      openModal('create')
-      searchParams.delete('action')
-      setSearchParams(searchParams)
-    }
   }, [])
 
   // Reload when floating window actions change data
@@ -485,24 +472,6 @@ export default function CAsPage() {
                   />
                 </>
               )}
-              {canWrite('cas') && (
-                isMobile ? (
-                  <Button type="button" size="lg" onClick={() => openModal('create')} className="w-11 h-11 p-0 shrink-0">
-                    <Plus size={22} weight="bold" />
-                  </Button>
-                ) : (
-                  <>
-                    <Button type="button" size="sm" onClick={() => openModal('create')} className="shrink-0">
-                      <Plus size={14} weight="bold" />
-                      {t('common.create')}
-                    </Button>
-                    <Button type="button" size="sm" variant="secondary" onClick={() => setShowImportModal(true)} className="shrink-0">
-                      <UploadSimple size={14} />
-                      {t('common.import')}
-                    </Button>
-                  </>
-                )
-              )}
             </div>
           </div>
 
@@ -518,12 +487,6 @@ export default function CAsPage() {
                   <ShieldCheck size={32} className="text-text-secondary" />
                 </div>
                 <h3 className="text-lg font-medium text-text-primary mb-1">{t('common.noCA')}</h3>
-                <p className="text-sm text-text-secondary text-center mb-4">{t('cas.createFirst')}</p>
-                {canWrite('cas') && (
-                  <Button type="button" onClick={() => openModal('create')}>
-                    <Plus size={16} /> {t('common.createCA')}
-                  </Button>
-                )}
               </div>
             ) : (
               <div className={cn('p-3', viewMode === 'columns' ? '' : 'space-y-3')}>
@@ -572,31 +535,6 @@ export default function CAsPage() {
         </div>
       </ResponsiveLayout>
 
-      {/* Create CA Modal */}
-      <CreateCAModal
-        open={modals.create}
-        onClose={() => closeModal('create')}
-        cas={cas}
-        onSuccess={loadCAs}
-      />
-
-      {/* Smart Import Modal */}
-      <SmartImportModal
-        isOpen={showImportModal}
-        onClose={() => setShowImportModal(false)}
-        onImportComplete={() => {
-          setShowImportModal(false)
-          loadCAs()
-        }}
-      />
-
-      {/* Manage Template Pins Modal */}
-      <ManageTemplatePinsModal
-        open={showPinsModal}
-        onOpenChange={setShowPinsModal}
-        ca={pinsModalCA}
-        t={t}
-      />
       
     </>
   )

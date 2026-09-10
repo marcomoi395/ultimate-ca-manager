@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
-import { CaTemplatesController, CasController } from './cas.controller';
+import { CasController } from './cas.controller';
 import { CasService } from './cas.service';
 
-@Module({ controllers: [CasController, CaTemplatesController], providers: [CasService] })
+@Module({ controllers: [CasController], providers: [CasService] })
 export class CasModule {}
