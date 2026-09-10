@@ -1,9 +1,13 @@
-import { Injectable, ConflictException, GoneException, Inject, NotFoundException, NotImplementedException, Optional } from '@nestjs/common';
+import { BadGatewayException, Injectable, ConflictException, GoneException, Inject, NotFoundException, NotImplementedException, Optional } from '@nestjs/common';
 import { CertificateWriteInfrastructure } from './write-infrastructure';
 import { EjbcaResourceAdapter } from '../integrations/ejbca/resource-adapter';
 import { mapCertificatePublicData } from './public-mapper';
 import type { CertificateListQuery } from './dtos/certificate-list.query';
 type CertificateReader = (query: CertificateListQuery) => Promise<unknown>;
+
+const SEARCH_PAGE_SIZE = 100;
+const SEARCH_PAGE_CONCURRENCY = 4;
+const MAX_SEARCH_PAGES = 1000;
 
 export interface CertificateReadResult {
   data: unknown;
@@ -28,6 +32,21 @@ export class CertificatesService {
       : await this.readForQuery(query);
     let certificates = this.extractCertificates(result).map(mapCertificatePublicData);
     if (query.status?.length) certificates = certificates.filter((certificate) => query.status!.includes(certificate.status));
+    const sortBy = query.sortBy ?? 'subject';
+    const sortOrder = query.sortOrder ?? 'asc';
+    const statusRank: Record<string, number> = { revoked: 1, expired: 2, expiring: 3, valid: 4 };
+    certificates.sort((left, right) => {
+      if (sortBy === 'status') {
+        const comparison = statusRank[left.status] - statusRank[right.status];
+        if (comparison !== 0) return sortOrder === 'desc' ? -comparison : comparison;
+        return String(left.subject ?? left.descr ?? '').localeCompare(String(right.subject ?? right.descr ?? ''));
+      }
+      const field = sortBy === 'subject_cn' ? 'subject' : sortBy === 'key_algo' ? 'key_algorithm' : sortBy;
+      const leftValue = field === 'subject' ? left.subject ?? left.descr : left[field];
+      const rightValue = field === 'subject' ? right.subject ?? right.descr : right[field];
+      const comparison = String(leftValue ?? '').localeCompare(String(rightValue ?? ''));
+      return sortOrder === 'desc' ? -comparison : comparison;
+    });
     const offset = (query.page - 1) * query.limit;
     return {
       data: certificates.slice(offset, offset + query.limit),
@@ -153,14 +172,38 @@ export class CertificatesService {
   }
 
   private async readForQuery(query: CertificateListQuery): Promise<unknown> {
-    const statuses = query.status ?? [];
+    const statuses = query.status ?? ['valid', 'revoked'];
     const nativeStatuses = statuses
       .map((status) => status === 'valid' || status === 'expiring' || status === 'expired' ? 'CERT_ACTIVE' : status === 'revoked' ? 'CERT_REVOKED' : status)
       .filter((status, index, all) => all.indexOf(status) === index);
-    const base = { ...query, page: 1, limit: nativeStatuses.length > 1 ? 100 : query.limit };
-    if (nativeStatuses.length <= 1) return this.adapter!.listCertificates(this.toEjbcaSearchQuery({ ...base, status: nativeStatuses }));
-    const results = await Promise.all(nativeStatuses.map((status) => this.adapter!.listCertificates(this.toEjbcaSearchQuery({ ...base, status: [status] }))));
-    return { certificates: results.flatMap((result) => this.extractCertificates(result)) };
+    const results = await Promise.all(nativeStatuses.map((status) => this.readAllForStatus(query, status)));
+    return {
+      certificates: results.flatMap((result) => result.certificates),
+      total: results.reduce((total, result) => total + result.total, 0),
+    };
+  }
+
+  private async readAllForStatus(query: CertificateListQuery, status: string) {
+    const first = await this.adapter!.listCertificates(this.toEjbcaSearchQuery({
+      ...query, page: 1, limit: SEARCH_PAGE_SIZE, status: [status],
+    }));
+    const certificates = this.extractCertificates(first);
+    const total = this.extractTotal(first, certificates.length);
+    const pageCount = Math.ceil(total / SEARCH_PAGE_SIZE);
+    if (!Number.isSafeInteger(total) || total < certificates.length || pageCount > MAX_SEARCH_PAGES) {
+      throw new BadGatewayException('EJBCA certificate search returned an invalid total');
+    }
+
+    const remaining: Record<string, unknown>[] = [];
+    for (let page = 2; page <= pageCount; page += SEARCH_PAGE_CONCURRENCY) {
+      const pageCountInBatch = Math.min(SEARCH_PAGE_CONCURRENCY, pageCount - page + 1);
+      const results = await Promise.all(Array.from({ length: pageCountInBatch }, (_, index) =>
+        this.adapter!.listCertificates(this.toEjbcaSearchQuery({
+          ...query, page: page + index, limit: SEARCH_PAGE_SIZE, status: [status],
+        }))));
+      remaining.push(...results.flatMap((result) => this.extractCertificates(result)));
+    }
+    return { certificates: [...certificates, ...remaining], total };
   }
 
   private extractCertificates(result: unknown): Record<string, unknown>[] {
@@ -177,7 +220,8 @@ export class CertificatesService {
       const value = result as Record<string, unknown>;
       if (typeof value.total === 'number') return value.total;
       if (value.pagination_summary && typeof value.pagination_summary === 'object') {
-        const total = (value.pagination_summary as Record<string, unknown>).total;
+        const summary = value.pagination_summary as Record<string, unknown>;
+        const total = summary.total ?? summary.total_certs;
         if (typeof total === 'number') return total;
       }
       if (value.pagination && typeof value.pagination === 'object') {

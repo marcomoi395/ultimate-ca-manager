@@ -7,7 +7,9 @@ import { CERTIFICATE_ROUTE_PARITY } from '../src/certificates/contracts';
 
 function adapter() {
   return {
-    listCertificates: async () => ({ certificates: [{ id: 'cert-1' }] }),
+    listCertificates: async (query: URLSearchParams) => query.get('status') === 'CERT_ACTIVE'
+      ? { certificates: [{ id: 'cert-1' }] }
+      : { certificates: [] },
     getCertificate: async (id: string) => ({ id }),
     getCertificateCount: async () => ({ count: 1 }),
   } as never;

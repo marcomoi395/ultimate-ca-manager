@@ -55,19 +55,20 @@ export function mapCertificatePublicData(record: Record<string, unknown>): Certi
   const remaining = validTo ? Math.ceil((Date.parse(validTo) - Date.now()) / 86400000) : null;
   const san = asString(record.subjectAltName ?? record.subject_alt_name);
   const fingerprint = asString(record.fingerprint);
+  const status = normalizeStatus(record.status ?? record.certificate_status, validTo, revokedAt);
 
   return {
     id: serial,
     serial_number: serial,
     subject,
     issuer,
-    status: normalizeStatus(record.status ?? record.certificate_status, validTo, revokedAt),
+    status,
     has_private_key: false,
     valid_from: validFrom,
     valid_to: validTo,
     not_valid_before: validFrom,
     not_valid_after: validTo,
-    revoked: Boolean(revokedAt),
+    revoked: status === 'revoked',
     revoked_at: revokedAt,
     revoke_reason: record.revocationReason ?? null,
     pem,

@@ -36,9 +36,132 @@ describe('CertificatesService', () => {
     expect(result.data.map((certificate) => certificate.status)).toEqual(['valid', 'expiring', 'revoked']);
     expect(calls.map((query) => query.get('status'))).toEqual(['CERT_ACTIVE', 'CERT_REVOKED']);
   });
+  it('includes revoked certificates when no status filter is supplied', async () => {
+    const calls: URLSearchParams[] = [];
+    const adapter = {
+      listCertificates: async (query: URLSearchParams) => {
+        calls.push(query);
+        return query.get('status') === 'CERT_REVOKED'
+          ? { certificates: [{ serial_number: 'revoked', subject_dn: 'CN=a-revoked.example', status: 'CERT_REVOKED', revoked: true, valid_to: '2099-01-01T00:00:00Z' }] }
+          : { certificates: [{ serial_number: 'valid', subject_dn: 'CN=z-active.example', status: 'CERT_ACTIVE', valid_to: '2099-01-01T00:00:00Z' }] };
+      },
+    } as never;
+    const service = new CertificatesService(adapter);
+
+    const result = await service.list({ page: 1, limit: 25, sortBy: 'subject', sortOrder: 'asc' });
+
+    expect(calls.map((query) => query.get('status'))).toEqual(['CERT_ACTIVE', 'CERT_REVOKED']);
+    expect(result.data.map((certificate) => certificate.status)).toEqual(['revoked', 'valid']);
+    expect(result.data.map((certificate) => certificate.subject)).toEqual(['CN=a-revoked.example', 'CN=z-active.example']);
+  });
+  it('fetches all upstream pages before default pagination', async () => {
+    const active = Array.from({ length: 101 }, (_, index) => ({
+      serial_number: `active-${String(index).padStart(3, '0')}`,
+      subject_dn: `CN=m-active-${String(index).padStart(3, '0')}.example`,
+      status: 'CERT_ACTIVE',
+    }));
+    const revoked = [{ serial_number: 'revoked-000', subject_dn: 'CN=a-revoked.example', status: 'CERT_REVOKED' }];
+    const calls: URLSearchParams[] = [];
+    const adapter = {
+      listCertificates: async (query: URLSearchParams) => {
+        calls.push(query);
+        const rows = query.get('status') === 'CERT_REVOKED' ? revoked : active;
+        const page = Number(query.get('page'));
+        const limit = Number(query.get('limit'));
+        return {
+          certificates: rows.slice((page - 1) * limit, page * limit),
+          pagination_summary: { total_certs: rows.length },
+        };
+      },
+    } as never;
+    const result = await new CertificatesService(adapter).list({ page: 5, limit: 25 });
+
+    expect(result.meta.total).toBe(102);
+    expect(result.data.map((certificate) => certificate.serial_number)).toEqual(['active-099', 'active-100']);
+    expect(calls.filter((query) => query.get('status') === 'CERT_ACTIVE').map((query) => query.get('page'))).toEqual(['1', '2']);
+  });
+  it('paginates an explicit revoked filter locally', async () => {
+    const revoked = Array.from({ length: 30 }, (_, index) => ({
+      serial_number: `revoked-${String(index).padStart(2, '0')}`,
+      status: 'CERT_REVOKED',
+    }));
+    const adapter = {
+      listCertificates: async (query: URLSearchParams) => {
+        const page = Number(query.get('page'));
+        const limit = Number(query.get('limit'));
+        return {
+          certificates: revoked.slice((page - 1) * limit, page * limit),
+          pagination_summary: { total_certs: revoked.length },
+        };
+      },
+    } as never;
+    const result = await new CertificatesService(adapter).list({ page: 2, limit: 25, status: ['revoked'] });
+
+    expect(result.meta.total).toBe(30);
+    expect(result.data.map((certificate) => certificate.serial_number)).toEqual([
+      'revoked-25', 'revoked-26', 'revoked-27', 'revoked-28', 'revoked-29',
+    ]);
+  });
+  it('reports the locally filtered total for active certificate states', async () => {
+    const adapter = {
+      listCertificates: async () => ({
+        certificates: [
+          { serial_number: 'valid', valid_to: '2099-01-01T00:00:00Z', status: 'CERT_ACTIVE' },
+          { serial_number: 'expired', valid_to: '2020-01-01T00:00:00Z', status: 'CERT_ACTIVE' },
+        ],
+        pagination_summary: { total_certs: 2 },
+      }),
+    } as never;
+    const result = await new CertificatesService(adapter).list({ page: 1, limit: 25, status: ['valid'] });
+
+    expect(result.meta.total).toBe(1);
+    expect(result.data.map((certificate) => certificate.serial_number)).toEqual(['valid']);
+  });
+  it('rejects implausible upstream pagination totals', async () => {
+    const adapter = {
+      listCertificates: async () => ({
+        certificates: [],
+        pagination_summary: { total_certs: 100001 },
+      }),
+    } as never;
+
+    await expect(new CertificatesService(adapter).list({ page: 1, limit: 25 }))
+      .rejects.toMatchObject({ status: 502 });
+  });
+  it('uses subject as a status-sort tie breaker', async () => {
+    const service = new CertificatesService(async () => [
+      { serial_number: 'z', subject_dn: 'CN=z.example', status: 'CERT_ACTIVE' },
+      { serial_number: 'a', subject_dn: 'CN=a.example', status: 'CERT_ACTIVE' },
+    ]);
+
+    const result = await service.list({ page: 1, limit: 25, status: ['valid'], sortBy: 'status' });
+
+    expect(result.data.map((certificate) => certificate.serial_number)).toEqual(['a', 'z']);
+  });
+  it('sorts by the normalized key algorithm field', async () => {
+    const service = new CertificatesService(async () => [
+      { serial_number: 'strong', key_algorithm: 'RSA 4096', status: 'CERT_ACTIVE' },
+      { serial_number: 'weak', key_algorithm: 'RSA 2048', status: 'CERT_ACTIVE' },
+    ]);
+
+    const result = await service.list({ page: 1, limit: 25, sortBy: 'key_algo' });
+
+    expect(result.data.map((certificate) => certificate.serial_number)).toEqual(['weak', 'strong']);
+  });
+  it('maps revoked EJBCA statuses to the public revoked flag', async () => {
+    const service = new CertificatesService(async () => [
+      { serial_number: 'revoked', status: 'CERT_REVOKED' },
+    ]);
+
+    const result = await service.list({ page: 1, limit: 25 });
+
+    expect(result.data[0]).toMatchObject({ status: 'revoked', revoked: true });
+  });
   it('does not proxy certificate reads through UCM v2', async () => {
     const adapter = {
-      listCertificates: async () => ({ certificates: [{ id: 'cert-1' }] }),
+      listCertificates: async (query: URLSearchParams) => query.get('status') === 'CERT_ACTIVE'
+        ? { certificates: [{ id: 'cert-1' }] }
+        : { certificates: [] },
     } as never;
     const service = new CertificatesService(adapter);
     await expect(service.list({ page: 1, limit: 25 })).resolves.toMatchObject({
