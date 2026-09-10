@@ -9,7 +9,7 @@ RUN bun run build
 
 FROM oven/bun:1.3.14
 
-ENV NODE_ENV=development
+ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=build /app/package.json ./
 COPY --from=build /app/node_modules ./node_modules

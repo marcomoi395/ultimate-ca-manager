@@ -48,4 +48,27 @@ describe('EnrollCertificateModal', () => {
       password: 'enrollment-password',
     }))
   })
+
+  it('fills every field with disposable sample data', async () => {
+    const user = userEvent.setup()
+    render(
+      <EnrollCertificateModal
+        open
+        onOpenChange={vi.fn()}
+        cas={[]}
+        onSubmit={vi.fn()}
+        t={(key) => key}
+      />,
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Use sample data' }))
+
+    expect(document.querySelector('textarea')).toHaveValue(expect.stringContaining('BEGIN CERTIFICATE REQUEST'))
+    const inputs = document.querySelectorAll('input')
+    expect(inputs[0]).toHaveValue('TLS')
+    expect(inputs[1]).toHaveValue('Default')
+    expect(inputs[2]).toHaveValue('sample-enrollment-user')
+    expect(inputs[3]).toHaveValue('sample-enrollment-password')
+    expect(screen.getByRole('combobox')).toHaveTextContent('ManagementCA (sample)')
+  })
 })
