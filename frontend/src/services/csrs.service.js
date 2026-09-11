@@ -39,6 +39,9 @@ export const csrsService = {
     if (Array.isArray(extra_ekus) && extra_ekus.length) payload.extra_ekus = extra_ekus
     return apiClient.post(`/csrs/${id}/sign`, payload)
   },
+  async signEjbca(id, data) {
+    return apiClient.post(`/csrs/${id}/sign`, { mode: 'ejbca', ...data })
+  },
 
   async delete(id) {
     return apiClient.delete(`/csrs/${id}`)

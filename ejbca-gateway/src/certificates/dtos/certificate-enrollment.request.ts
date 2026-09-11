@@ -1,10 +1,10 @@
 import { BadRequestException } from '@nestjs/common';
 import { parseCertificateRequest } from '../certificate-request.parser';
 
+const DEFAULT_CERTIFICATE_PROFILE = 'ENDUSER';
+const DEFAULT_END_ENTITY_PROFILE = 'UCMDEFAULT';
 const REQUIRED_FIELDS = [
   'certificate_request',
-  'certificate_profile_name',
-  'end_entity_profile_name',
   'certificate_authority_name',
   'username',
   'password',
@@ -40,8 +40,8 @@ export interface ClientKeyEnrollmentRequest {
 
 export function parseCertificateEnrollmentRequest(body: Record<string, unknown>): CertificateEnrollmentRequest {
   const certificate_request = requiredString(body, 'certificate_request');
-  const certificate_profile_name = requiredString(body, 'certificate_profile_name');
-  const end_entity_profile_name = requiredString(body, 'end_entity_profile_name');
+  const certificate_profile_name = optionalString(body, 'certificate_profile_name') ?? DEFAULT_CERTIFICATE_PROFILE;
+  const end_entity_profile_name = optionalString(body, 'end_entity_profile_name') ?? DEFAULT_END_ENTITY_PROFILE;
   const certificate_authority_name = requiredString(body, 'certificate_authority_name');
   const username = requiredString(body, 'username');
   const password = requiredString(body, 'password');
@@ -63,6 +63,14 @@ export function parseCertificateEnrollmentRequest(body: Record<string, unknown>)
     include_chain: body.include_chain as boolean | undefined,
     response_format: body.response_format as 'DER' | undefined,
   };
+}
+
+function optionalString(body: Record<string, unknown>, field: string): string | undefined {
+  const value = body[field];
+  if (value === undefined || value === null) return undefined;
+  if (typeof value !== 'string') throw new BadRequestException(`${field} must be a string`);
+  const trimmed = value.trim();
+  return trimmed || undefined;
 }
 
 function requiredString(body: Record<string, unknown>, field: typeof REQUIRED_FIELDS[number]): string {

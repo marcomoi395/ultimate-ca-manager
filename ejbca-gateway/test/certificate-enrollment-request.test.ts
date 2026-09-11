@@ -40,6 +40,20 @@ describe('certificate enrollment request', () => {
     expect(() => parseCertificateEnrollmentRequest({ ...valid, password: '' })).toThrow('password is required');
     expect(() => parseCertificateEnrollmentRequest({ ...valid, certificate_request: undefined })).toThrow('certificate_request is required');
   });
+  it('uses safe default profiles when optional fields are omitted', async () => {
+    const request = parseCertificateEnrollmentRequest({
+      ...valid,
+      certificate_profile_name: undefined,
+      end_entity_profile_name: undefined,
+    });
+
+    await expect(toClientKeyEnrollmentRequest(request)).resolves.toMatchObject({
+      end_entity: {
+        certificate_profile_name: 'ENDUSER',
+        end_entity_profile_name: 'UCMDEFAULT',
+      },
+    });
+  });
 
   it('rejects unsupported response configuration', () => {
     expect(() => parseCertificateEnrollmentRequest({ ...valid, include_chain: 'true' })).toThrow('include_chain must be a boolean');

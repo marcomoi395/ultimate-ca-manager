@@ -610,6 +610,63 @@ class TestSignCSR:
         r = auth_client.post(f'/api/v2/csrs/{csr_id}/sign',
                              content_type='application/json')
         assert r.status_code == 400
+    def test_sign_csr_ejbca_requires_enrollment_fields(self, auth_client):
+        cr = _create_csr(auth_client, cn='ejbca-required.example.com')
+        csr_id = _json(cr)['data']['id']
+        response = auth_client.post(
+            f'/api/v2/csrs/{csr_id}/sign',
+            data=json.dumps({'mode': 'ejbca'}),
+            content_type='application/json',
+        )
+        assert response.status_code == 400
+
+    def test_sign_csr_ejbca_persists_gateway_certificate(self, auth_client, monkeypatch):
+        from cryptography import x509
+        from cryptography.hazmat.primitives import hashes, serialization
+        from cryptography.hazmat.primitives.asymmetric import rsa
+
+        key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+        csr = (
+            x509.CertificateSigningRequestBuilder()
+            .subject_name(x509.Name([x509.NameAttribute(x509.oid.NameOID.COMMON_NAME, 'ejbca.example.com')]))
+            .sign(key, hashes.SHA256())
+        )
+        csr_pem = csr.public_bytes(serialization.Encoding.PEM).decode()
+        cr = auth_client.post('/api/v2/csrs/upload', json={'pem': csr_pem})
+        csr_id = _json(cr)['data']['id']
+        now = __import__('datetime').datetime.now(__import__('datetime').timezone.utc)
+        issued = (
+            x509.CertificateBuilder()
+            .subject_name(csr.subject)
+            .issuer_name(x509.Name([x509.NameAttribute(x509.oid.NameOID.COMMON_NAME, 'EJBCA CA')]))
+            .public_key(csr.public_key())
+            .serial_number(1234)
+            .not_valid_before(now)
+            .not_valid_after(now.replace(year=now.year + 1))
+            .sign(key, hashes.SHA256())
+        )
+        issued_der = base64.b64encode(issued.public_bytes(serialization.Encoding.DER)).decode()
+
+        class FakeResponse:
+            status_code = 200
+
+            def json(self):
+                return {'data': {'certificate': issued_der, 'certificate_chain': [], 'serial_number': '4D2', 'response_format': 'DER'}}
+
+        monkeypatch.setattr('requests.post', lambda *args, **kwargs: FakeResponse())
+        response = auth_client.post(
+            f'/api/v2/csrs/{csr_id}/sign',
+            json={
+                'mode': 'ejbca',
+                'certificate_authority_name': 'ManagementCA',
+                'certificate_profile_name': 'TLS',
+                'end_entity_profile_name': 'Default',
+                'username': 'enroll-user',
+                'password': 'secret',
+            },
+        )
+        assert response.status_code == 200, response.data
+        assert _json(response)['data']['status'] in ('valid', 'expiring')
 
 
 # ============================================================
