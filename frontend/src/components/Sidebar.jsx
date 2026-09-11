@@ -6,7 +6,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { 
-  House, Certificate, ShieldCheck, User, Key, Gear,
+  House, Certificate, ShieldCheck, FileText, User, Key, Gear,
   SignOut, Check, UserCircle, Lightning, ClockCounterClockwise, Robot,
   UsersThree, Shield, Lock, FileX, Vault, Wrench, Globe, CaretRight,
   Gavel, Stamp, ChartBar, Stack, Broadcast, CaretDown, MagnifyingGlass,
@@ -34,6 +34,7 @@ const navGroups = [
     children: [
       { id: 'certificates', icon: Certificate, labelKey: 'common.certificates', path: '/certificates' },
       { id: 'cas', icon: ShieldCheck, labelKey: 'common.cas', path: '/cas' },
+      { id: 'csrs', icon: FileText, labelKey: 'common.csrs', path: '/csrs' },
     ]
   },
   {

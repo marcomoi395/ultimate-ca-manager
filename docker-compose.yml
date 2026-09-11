@@ -111,6 +111,17 @@ services:
       # Paste PEM-encoded certificate/key here or mount as volumes
       - UCM_HTTPS_CERT=${UCM_HTTPS_CERT:-}
       - UCM_HTTPS_KEY=${UCM_HTTPS_KEY:-}
+
+      # ========================================
+      # EJBCA GATEWAY (OPTIONAL)
+      # ========================================
+
+      # Set UCM_INTERNAL_AUTH_SECRET to a strong shared value before enabling
+      # the `migration` profile. The gateway uses it to call UCM's internal API.
+      # Give UCM a certificate whose chain the gateway image trusts and whose
+      # SAN contains UCM_FQDN; self-signed UCM certificates are not supported.
+      - UCM_INTERNAL_AUTH_SECRET=${UCM_INTERNAL_AUTH_SECRET:-}
+      - EJBCA_GATEWAY_URL=${EJBCA_GATEWAY_URL:-http://ejbca-gateway:8081}
     
     healthcheck:
       test: ["CMD", "curl", "-f", "-k", "https://localhost:${UCM_HTTPS_PORT:-8443}/api/health"]
@@ -141,18 +152,125 @@ services:
           memory: 512M
     
     networks:
-      - ucm-network
+      ucm-network:
+        aliases:
+          - ${UCM_FQDN:-ucm.local}
     
     labels:
       - "com.ultimate-ca-manager.description=Certificate Authority Management"
       - "traefik.enable=false"  # Disable if using Traefik
 
+  # The keyfactor/ejbca-ce image is vendor-supported for learning, testing,
+  # and prototyping—not production PKI—so select a supported EJBCA deployment
+  # before using this profile for a production CA.
+
+  # EJBCA integration stack. Enable explicitly with:
+  # docker compose --profile migration up -d
+  # This profile requires strong UCM_INTERNAL_AUTH_SECRET and EJBCA_DB_PASSWORD
+  # values, a UCM certificate trusted by the gateway, and EJBCA client
+  # certificates in EJBCA_CERTS_DIR. Before starting, configure the EJBCA REST
+  # endpoint to trust ca.crt and require the client certificate. It deliberately
+  # publishes no EJBCA or gateway ports to the host.
+  ejbca-database:
+    image: "${EJBCA_DATABASE_IMAGE:-postgres:16-alpine}"
+    container_name: ${EJBCA_DATABASE_CONTAINER_NAME:-ucm-ejbca-database}
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${EJBCA_DB_NAME:-ejbca}
+      POSTGRES_USER: ${EJBCA_DB_USER:-ejbca}
+      POSTGRES_PASSWORD: ${EJBCA_DB_PASSWORD:-}
+    volumes:
+      - ejbca-database:/var/lib/postgresql/data
+    networks:
+      - pki-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    profiles:
+      - migration
+
+  ejbca:
+    image: "${EJBCA_IMAGE:-keyfactor/ejbca-ce:9.3.7}"
+    container_name: ${EJBCA_CONTAINER_NAME:-ucm-ejbca}
+    hostname: ejbca
+    restart: unless-stopped
+    depends_on:
+      ejbca-database:
+        condition: service_healthy
+    environment:
+      DATABASE_JDBC_URL: jdbc:postgresql://ejbca-database:5432/${EJBCA_DB_NAME:-ejbca}
+      DATABASE_USER: ${EJBCA_DB_USER:-ejbca}
+      DATABASE_PASSWORD: ${EJBCA_DB_PASSWORD:-}
+      LOG_LEVEL_APP: ${EJBCA_LOG_LEVEL_APP:-INFO}
+      LOG_LEVEL_SERVER: ${EJBCA_LOG_LEVEL_SERVER:-INFO}
+    expose:
+      - "8080"
+      - "8443"
+    networks:
+      - pki-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -k -f https://127.0.0.1:8443/ejbca/publicweb/healthcheck/ejbcahealth >/dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 90s
+    profiles:
+      - migration
+
+  ejbca-gateway:
+    image: ultimate-ca-manager-ejbca-gateway:latest
+    build:
+      context: ./ejbca-gateway
+      dockerfile: Dockerfile
+    container_name: ${EJBCA_GATEWAY_CONTAINER_NAME:-ucm-ejbca-gateway}
+    restart: unless-stopped
+    depends_on:
+      ejbca:
+        condition: service_healthy
+    environment:
+      EJBCA_GATEWAY_ENV: production
+      EJBCA_GATEWAY_HOST: 0.0.0.0
+      EJBCA_GATEWAY_PORT: 8081
+      EJBCA_API_URL: ${EJBCA_API_URL:-https://ejbca:8443/ejbca/ejbca-rest-api}
+      EJBCA_CA_CERT_FILE: ${EJBCA_CA_CERT_FILE:-/run/secrets/ejbca/ca.crt}
+      EJBCA_CLIENT_CERT_FILE: ${EJBCA_CLIENT_CERT_FILE:-/run/secrets/ejbca/client.crt}
+      EJBCA_CLIENT_KEY_FILE: ${EJBCA_CLIENT_KEY_FILE:-/run/secrets/ejbca/client.key}
+      EJBCA_TIMEOUT_MS: ${EJBCA_TIMEOUT_MS:-30000}
+      UCM_AUTH_BASE_URL: ${UCM_AUTH_BASE_URL:-https://${UCM_FQDN:-ucm.local}:8443}
+      UCM_INTERNAL_AUTH_SECRET: ${UCM_INTERNAL_AUTH_SECRET:-}
+    volumes:
+      - ${EJBCA_CERTS_DIR:-./secrets/ejbca}:/run/secrets/ejbca:ro
+    expose:
+      - "8081"
+    networks:
+      - ucm-network
+      - pki-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8081/api/v3/health').then(async r => { const body = await r.json(); process.exit(r.ok && body.data?.ejbca === 'healthy' ? 0 : 1); }).catch(() => process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    labels:
+      - "com.ultimate-ca-manager.service=ejbca-gateway"
+    profiles:
+      - migration
+
+
 networks:
   ucm-network:
     driver: bridge
+  pki-network:
+    driver: bridge
+    internal: true
 
 volumes:
   ucm-data:
     driver: local
   ucm-hsm-tokens:
+    driver: local
+  ejbca-database:
     driver: local

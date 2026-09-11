@@ -192,6 +192,7 @@ services:
       - migration
 
   ejbca-gateway:
+    image: ultimate-ca-manager-ejbca-gateway:dev
     build:
       context: ./ejbca-gateway
       dockerfile: Dockerfile
