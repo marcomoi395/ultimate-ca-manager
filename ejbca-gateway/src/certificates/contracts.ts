@@ -24,7 +24,6 @@ export const CERTIFICATE_ROUTE_PARITY = {
   ],
   notImplemented: [
     'POST /certificates/:id/renew',
-    'POST /certificates/:id/export',
     'POST /certificates/export',
     'POST /certificates/import',
     'POST /certificates/bulk/:operation',

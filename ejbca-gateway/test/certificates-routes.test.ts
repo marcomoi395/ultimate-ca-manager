@@ -9,7 +9,10 @@ describe('certificate routes', () => {
       issue: async () => { calls.push('issue'); return { ok: true }; },
       revoke: async () => { calls.push('revoke'); return { ok: true }; },
       unhold: async () => { calls.push('unhold'); return { ok: true }; },
-      exportFile: async () => { calls.push('export'); return { ok: true }; },
+      exportFile: async () => {
+        calls.push('export');
+        return { data: Buffer.from('certificate'), type: 'application/x-pem-file', filename: 'cert-1.pem' };
+      },
       lint: async () => { calls.push('lint'); return { ok: true }; },
       removed: async () => { calls.push('removed'); return { ok: true }; },
     } as never;

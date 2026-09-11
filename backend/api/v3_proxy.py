@@ -23,7 +23,7 @@ def _proxy(resource, suffix):
     upstream = requests.request(request.method, url, headers=headers, data=request.get_data(), timeout=30)
     response_headers = {
         name: value for name, value in upstream.headers.items()
-        if name.lower() in ('content-type', 'cache-control')
+        if name.lower() in ('content-type', 'cache-control', 'content-disposition')
     }
     return Response(upstream.content, status=upstream.status_code, headers=response_headers)
 

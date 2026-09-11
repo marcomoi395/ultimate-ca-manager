@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Headers, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Headers, Param, Patch, Post, Query, StreamableFile } from '@nestjs/common';
 import { RequirePermission } from '../common/permission.guard';
 import { parseCertificateListQuery, type CertificateListQueryInput } from './dtos/certificate-list.query';
 import { parseCertificateEnrollmentRequest } from './dtos/certificate-enrollment.request';
@@ -46,7 +46,7 @@ export class CertificatesController {
   importCertificate(@Body() _body: unknown) { return this.service.mutate(); }
 
   @Post('export')
-  exportAll(@Body() _body: unknown) { return this.service.exportFile(); }
+  exportAll(@Body() _body: unknown) { return this.service.mutate(); }
 
   @Post('bulk/:operation')
   bulk(@Param('operation') _operation: string, @Body() _body: unknown) { return this.service.mutate(); }
@@ -66,7 +66,15 @@ export class CertificatesController {
   renew(@Param('id') _id: string) { return this.service.mutate(); }
 
   @Post(':id/export')
-  export(@Param('id') _id: string, @Body() _body: unknown) { return this.service.exportFile(); }
+  @RequirePermission('read:certificates')
+  async export(@Param('id') id: string, @Body() body: unknown) {
+    const result = await this.service.exportFile(id, body);
+    return new StreamableFile(result.data, {
+      type: result.type,
+      disposition: `attachment; filename="${result.filename}"`,
+      length: result.data.length,
+    });
+  }
 
   @Post(':id/key')
   uploadKey(@Param('id') _id: string, @Body() _body: unknown) { return this.service.removed(); }

@@ -40,6 +40,7 @@ export function ExportModal({
   canExportKey = false,
   isHsmBacked = false,
   defaultFormat = 'pem',
+  showChainOption = true,
   onExport,
 }) {
   const { t } = useTranslation()
@@ -79,7 +80,7 @@ export function ExportModal({
     setExporting(true)
     try {
       await onExport(format, {
-        includeChain,
+        ...(showChainOption ? { includeChain } : {}),
         includeKey: effectiveIncludeKey,
         password: (isPkcs12 || isJks) ? password : undefined,
       })
@@ -149,19 +150,20 @@ export function ExportModal({
             {t('export.options', 'Options')}
           </label>
 
-          {/* Include chain */}
-          <label className="flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-bg-secondary transition-colors cursor-pointer">
-            <input
-              type="checkbox"
-              checked={includeChain}
-              onChange={(e) => setIncludeChain(e.target.checked)}
-              className="w-4 h-4 rounded accent-accent-primary"
-            />
-            <div>
-              <div className="text-sm text-text-primary">{t('export.includeChain', 'Include CA chain')}</div>
-              <div className="text-xs text-text-tertiary">{t('export.includeChainDesc', 'Include issuing CA certificates')}</div>
-            </div>
-          </label>
+          {showChainOption && (
+            <label className="flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-bg-secondary transition-colors cursor-pointer">
+              <input
+                type="checkbox"
+                checked={includeChain}
+                onChange={(e) => setIncludeChain(e.target.checked)}
+                className="w-4 h-4 rounded accent-accent-primary"
+              />
+              <div>
+                <div className="text-sm text-text-primary">{t('export.includeChain', 'Include CA chain')}</div>
+                <div className="text-xs text-text-tertiary">{t('export.includeChainDesc', 'Include issuing CA certificates')}</div>
+              </div>
+            </label>
+          )}
 
           {/* Include private key — only if key exists AND user has permission */}
           {hasPrivateKey && canExportKey && !isPkcs12 && !isJks && (

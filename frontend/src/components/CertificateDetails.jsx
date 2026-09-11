@@ -131,6 +131,7 @@ export function CertificateDetails({
   showActions = true,
   showPem = true,
   embedded = false,
+  publicExportOnly = false,
 }) {
   const { t } = useTranslation()
   const [pemCopied, setPemCopied] = useState(false)
@@ -582,8 +583,9 @@ export function CertificateDetails({
       onClose={() => setShowExportModal(false)}
       entityType="certificate"
       entityName={cert.common_name || cert.subject}
-      hasPrivateKey={!!cert.has_private_key}
-      canExportKey={canWrite}
+      hasPrivateKey={publicExportOnly ? false : !!cert.has_private_key}
+      canExportKey={publicExportOnly ? false : canWrite}
+      showChainOption={!publicExportOnly}
       onExport={onExport}
     />
 

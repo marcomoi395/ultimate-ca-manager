@@ -214,12 +214,13 @@ export default function CertificatesPage() {
   }, [urlCertId, loading, certificates.length])
 
   // Export certificate
-  const handleExport = async (format, options = {}) => {
+  const handleExport = async (format) => {
     if (!selectedCert) return
     
     try {
-      const blob = await certificatesService.export(selectedCert.id, format, options)
-      const ext = { pem: 'pem', der: 'der', pkcs7: 'p7b', pkcs12: 'p12', pfx: 'pfx', jks: 'jks' }[format] || format
+      const serial = selectedCert.serial_number || selectedCert.id
+      const blob = await certificatesService.exportPublic(serial, selectedCert.issuer, format)
+      const ext = { pem: 'pem', der: 'der', pkcs7: 'p7b' }[format] || format
       downloadBlob(blob, `${selectedCert.common_name || 'certificate'}.${ext}`)
       showSuccess(t('messages.success.export.certificate'))
     } catch {
@@ -444,14 +445,14 @@ export default function CertificatesPage() {
       { label: t('common.delete'), icon: Trash, variant: 'danger', onClick: () => handleDelete(row.id) }
     ] : [])
   ], [canWrite, canDelete, t])
-
   // Export from row via ExportModal
-  const handleExportRow = async (format, options = {}) => {
+  const handleExportRow = async (format) => {
     if (!exportRowCert) return
     const cert = exportRowCert
     try {
-      const blob = await certificatesService.export(cert.id, format, options)
-      const ext = { pkcs12: 'p12', pkcs7: 'p7b', jks: 'jks' }[format] || format
+      const serial = cert.serial_number || cert.id
+      const blob = await certificatesService.exportPublic(serial, cert.issuer, format)
+      const ext = { pem: 'pem', der: 'der', pkcs7: 'p7b' }[format] || format
       downloadBlob(blob, `${cert.common_name || cert.cn || 'certificate'}.${ext}`)
       showSuccess(t('messages.success.export.certificate'))
     } catch {
@@ -562,12 +563,11 @@ export default function CertificatesPage() {
         </div>
       </HelpCard>
       <HelpCard title={t('help.exportFormats')} variant="tip">
-        {t('certificates.exportPEM')}, {t('certificates.exportDER')}, {t('certificates.exportPKCS12')}
+        {t('certificates.exportPEM')}, {t('certificates.exportDER')}, P7B
       </HelpCard>
     </div>
   )
 
-  // Slide-over content
   const slideOverContent = selectedCert ? (
     <CertificateDetails
       certificate={selectedCert}
@@ -579,6 +579,7 @@ export default function CertificatesPage() {
       onAddToTrustStore={handleAddToTrustStore}
       canWrite={canWrite('certificates')}
       canDelete={canDelete('certificates')}
+      publicExportOnly
     />
   ) : null
 
@@ -707,15 +708,15 @@ export default function CertificatesPage() {
         initialCert={selectedCert}
       />
 
-
       {/* Row Export Modal */}
       <ExportModal
         open={!!exportRowCert}
         onClose={() => setExportRowCert(null)}
         entityType="certificate"
         entityName={exportRowCert?.common_name || exportRowCert?.subject || ''}
-        hasPrivateKey={!!exportRowCert?.has_private_key}
-        canExportKey={hasPermission('read:private_keys')}
+        hasPrivateKey={false}
+        canExportKey={false}
+        showChainOption={false}
         onExport={handleExportRow}
       />
     </>

@@ -103,11 +103,11 @@ export function FloatingDetailWindow({ windowInfo }) {
   // Header action handlers
   const handleExport = async (format = 'pem', options = {}) => {
     try {
-      const service = config.service()
       const id = windowInfo.entityId
       const name = data?.cn || data?.common_name || data?.name || windowInfo.type
-      
-      const res = await service.export(id, format, options)
+      const res = windowInfo.type === 'certificate'
+        ? await certificatesService.exportPublic(data?.serial_number || id, data?.issuer, format)
+        : await config.service().export(id, format, options)
       const blob = res instanceof Blob ? res : new Blob([res.data || res], { type: 'application/octet-stream' })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
@@ -252,8 +252,9 @@ export function FloatingDetailWindow({ windowInfo }) {
   const resource = isCA ? 'cas' : isUserCert ? 'user_certificates' : 'certificates'
   const actionBarProps = data ? {
     onExport: handleExport,
-    hasPrivateKey,
-    canExportKey: canWrite(resource),
+    hasPrivateKey: isCert ? false : hasPrivateKey,
+    canExportKey: isCert ? false : canWrite(resource),
+    showChainOption: !isCert,
     entityType: isCA ? 'ca' : 'certificate',
     entityName: title,
     onLint: (isCert || isUserCert) ? () => setLintOpen(true) : null,
@@ -409,7 +410,7 @@ function DetailContent({ type, data, canWrite, canDelete, onExport, onDelete }) 
 /**
  * ActionBar — Toolbar under the window header with labeled action buttons
  */
-function ActionBar({ onExport, hasPrivateKey, canExportKey, entityType, entityName, onLint, onRequestKeyRecovery, onRenew, onRevoke, onUnhold, onOffline, onRestore, onManagePins, onDelete, canExport = true, onDownloadCsr, onUploadCertificate, onRenewCsr, t }) {
+function ActionBar({ onExport, hasPrivateKey, canExportKey, showChainOption = true, entityType, entityName, onLint, onRequestKeyRecovery, onRenew, onRevoke, onUnhold, onOffline, onRestore, onManagePins, onDelete, canExport = true, onDownloadCsr, onUploadCertificate, onRenewCsr, t }) {
   const [showExportModal, setShowExportModal] = useState(false)
   const btnBase = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all duration-150'
 
@@ -530,6 +531,7 @@ function ActionBar({ onExport, hasPrivateKey, canExportKey, entityType, entityNa
       entityName={entityName}
       hasPrivateKey={hasPrivateKey}
       canExportKey={canExportKey}
+      showChainOption={showChainOption}
       onExport={onExport}
     />
     </>

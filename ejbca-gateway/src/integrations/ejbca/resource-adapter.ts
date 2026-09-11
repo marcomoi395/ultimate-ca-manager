@@ -31,17 +31,29 @@ export class EjbcaResourceAdapter {
     return this.client.request('/v2/certificate/count');
   }
 
-  getCertificate(id: string, _issuer?: string): Promise<unknown> {
-    return this.client.request('/v2/certificate/search', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        pagination: { current_page: 1, page_size: 1 },
-        criteria: [{ property: 'SERIAL_NUMBER', operation: 'EQUAL', value: id }],
-        sort_by: 'subject',
-        sort_order: 'asc',
-      }),
-    });
+  // The verified EJBCA search contract filters by serial. Fetch every match;
+  // the service binds the requested issuer after normalizing EJBCA fields.
+  async getCertificate(id: string, _issuer?: string): Promise<unknown> {
+    const certificates: unknown[] = [];
+    for (let page = 1; page <= 1000; page += 1) {
+      const result = await this.client.request('/v2/certificate/search', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          pagination: { current_page: page, page_size: 100 },
+          criteria: [{ property: 'SERIAL_NUMBER', operation: 'EQUAL', value: id }],
+          sort_by: 'subject',
+          sort_order: 'asc',
+        }),
+      });
+      if (!result || typeof result !== 'object' || !('certificates' in result) || !Array.isArray(result.certificates)) {
+        return result;
+      }
+      const pageCertificates = result.certificates;
+      certificates.push(...pageCertificates);
+      if (pageCertificates.length < 100) return { ...result, certificates };
+    }
+    throw new Error(`EJBCA certificate search exceeded 1000 pages for serial ${id}`);
   }
   getRevocationStatus(issuer: string, serial: string): Promise<unknown> {
     return this.client.request(`/v1/certificate/${encodeURIComponent(issuer)}/${encodeURIComponent(serial)}/revocationstatus`);

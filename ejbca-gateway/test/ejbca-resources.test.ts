@@ -18,7 +18,7 @@ describe('EJBCA resource adapter', () => {
     const calls: unknown[][] = [];
     const adapter = new EjbcaResourceAdapter({ request: async (...args) => { calls.push(args); return { ok: true }; } });
     await adapter.getCertificate('ABC');
-    expect(calls).toEqual([['/v2/certificate/search', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ pagination: { current_page: 1, page_size: 1 }, criteria: [{ property: 'SERIAL_NUMBER', operation: 'EQUAL', value: 'ABC' }], sort_by: 'subject', sort_order: 'asc' }) }]]);
+    expect(calls).toEqual([['/v2/certificate/search', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ pagination: { current_page: 1, page_size: 100 }, criteria: [{ property: 'SERIAL_NUMBER', operation: 'EQUAL', value: 'ABC' }], sort_by: 'subject', sort_order: 'asc' }) }]]);
   });
   it('maps certificate status verification to EJBCA revocationstatus', async () => {
     const calls: unknown[][] = [];

@@ -1,4 +1,6 @@
-import { BadGatewayException, Injectable, ConflictException, GoneException, Inject, NotFoundException, NotImplementedException, Optional } from '@nestjs/common';
+import { BadGatewayException, BadRequestException, Injectable, ConflictException, GoneException, Inject, NotFoundException, NotImplementedException, Optional } from '@nestjs/common';
+import * as asn1js from 'asn1js';
+import * as pkijs from 'pkijs';
 import { CertificateWriteInfrastructure } from './write-infrastructure';
 import { EjbcaResourceAdapter } from '../integrations/ejbca/resource-adapter';
 import { mapCertificatePublicData } from './public-mapper';
@@ -16,6 +18,21 @@ const MAX_SEARCH_PAGES = 1000;
 export interface CertificateReadResult {
   data: unknown;
   meta: { page: number; per_page: number; total: number };
+}
+
+type CertificateExportFormat = 'pem' | 'der' | 'p7b';
+
+interface CertificateExport {
+  data: Buffer;
+  type: string;
+  filename: string;
+}
+
+function field(record: Record<string, unknown>, names: string[]): string | undefined {
+  for (const name of names) {
+    if (typeof record[name] === 'string') return record[name] as string;
+  }
+  return undefined;
 }
 
 @Injectable()
@@ -101,25 +118,80 @@ export class CertificatesService {
 
   lintStatus(): Promise<never> { return this.removed(); }
   async getById(id: string, issuer?: string): Promise<unknown> {
-    const result = this.reader
-      ? await this.reader({ page: 1, limit: 100 })
-      : await this.adapter!.getCertificate(id, issuer);
-    const certificates = (await this.refreshRevocationStatuses(this.extractCertificates(result))).map(mapCertificatePublicData);
-    const matches = certificates.filter((certificate) =>
-      certificate.serial_number === id && (!issuer || certificate.issuer === issuer),
-    );
-    if (matches.length > 1) throw new ConflictException(`Certificate ${id} is ambiguous`);
-    const match = matches[0];
-    if (!match) throw new NotFoundException(`Certificate ${id} not found`);
-    return match;
+    const record = await this.getCertificateRecord(id, issuer);
+    const [current] = await this.refreshRevocationStatuses([record]);
+    return mapCertificatePublicData(current);
   }
 
   mutate(): Promise<never> {
     throw new NotImplementedException('Certificate mutations are owned by UCM and are not exposed by EJBCA REST');
   }
 
-  exportFile(): Promise<never> {
-    throw new NotImplementedException('Certificate export through the EJBCA adapter is not implemented');
+  async exportFile(id: string, body: unknown): Promise<CertificateExport> {
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      throw new BadRequestException('Export body must be a JSON object');
+    }
+    const request = body as Record<string, unknown>;
+    if (typeof request.issuer !== 'string' || !request.issuer) {
+      throw new BadRequestException('issuer is required for certificate export');
+    }
+
+    const requestedFormat = String(request.format ?? 'pem').toLowerCase();
+    let format: CertificateExportFormat;
+    if (requestedFormat === 'pkcs7' || requestedFormat === 'p7b') {
+      format = 'p7b';
+    } else if (requestedFormat === 'pem' || requestedFormat === 'der') {
+      format = requestedFormat;
+    } else {
+      throw new BadRequestException(`Unsupported export format: ${requestedFormat}`);
+    }
+
+    const record = await this.getCertificateRecord(id, request.issuer);
+    const encoded = field(record, ['base64Cert', 'certificate']);
+    if (!encoded) throw new BadGatewayException('EJBCA certificate search did not return certificate bytes');
+
+    const firstPass = Buffer.from(encoded.replace(/\s/g, ''), 'base64');
+    const nestedBase64 = firstPass.toString('ascii').replace(/\s/g, '');
+    const der = /^[A-Za-z0-9+/]+={0,2}$/.test(nestedBase64) && nestedBase64.length % 4 === 0
+      ? Buffer.from(nestedBase64, 'base64')
+      : firstPass;
+    const parsed = asn1js.fromBER(der.buffer.slice(der.byteOffset, der.byteOffset + der.byteLength));
+    if (parsed.offset === -1) throw new BadGatewayException('EJBCA returned an invalid DER certificate');
+    let certificate: pkijs.Certificate;
+    try {
+      certificate = new pkijs.Certificate({ schema: parsed.result });
+    } catch {
+      throw new BadGatewayException('EJBCA returned a certificate that is not valid X.509 DER');
+    }
+    const filenameBase = id.replace(/[^A-Za-z0-9._-]/g, '_') || 'certificate';
+
+    if (format === 'pem') {
+      const base64 = der.toString('base64').match(/.{1,64}/g)?.join('\n');
+      return {
+        data: Buffer.from(`-----BEGIN CERTIFICATE-----\n${base64}\n-----END CERTIFICATE-----\n`),
+        type: 'application/x-pem-file',
+        filename: `${filenameBase}.pem`,
+      };
+    }
+    if (format === 'der') {
+      return { data: der, type: 'application/pkix-cert', filename: `${filenameBase}.der` };
+    }
+
+    const signedData = new pkijs.SignedData({
+      version: 1,
+      encapContentInfo: new pkijs.EncapsulatedContentInfo({ eContentType: pkijs.SignedData.ID_DATA }),
+      certificates: [certificate],
+      signerInfos: [],
+    });
+    const contentInfo = new pkijs.ContentInfo({
+      contentType: pkijs.ContentInfo.SIGNED_DATA,
+      content: signedData.toSchema(),
+    });
+    return {
+      data: Buffer.from(contentInfo.toSchema().toBER()),
+      type: 'application/pkcs7-mime',
+      filename: `${filenameBase}.p7b`,
+    };
   }
   async issue(body: CertificateEnrollmentRequest, key?: string): Promise<unknown> {
     const claim = this.writes.claim(key, JSON.stringify(body));
@@ -155,6 +227,19 @@ export class CertificatesService {
     this.writes.saveResponse(key, result);
     this.writes.audit({ actor_id: 'unknown', action: 'certificate.unhold', correlation_id: 'unknown', outcome: 'success', metadata: { serial: id } });
     return result;
+  }
+
+  private async getCertificateRecord(id: string, issuer?: string): Promise<Record<string, unknown>> {
+    const result = this.reader
+      ? await this.reader({ page: 1, limit: 100 })
+      : await this.adapter!.getCertificate(id, issuer);
+    const matches = this.extractCertificates(result).filter((record) =>
+      field(record, ['serial_number', 'serialNumber', 'serial', 'id']) === id
+      && (!issuer || field(record, ['issuer', 'issuer_dn', 'issuerDN']) === issuer),
+    );
+    if (matches.length > 1) throw new ConflictException(`Certificate ${id} is ambiguous`);
+    if (!matches[0]) throw new NotFoundException(`Certificate ${id} not found`);
+    return matches[0];
   }
 
   private publicWriteResult(result: unknown): {
