@@ -11,7 +11,8 @@ from cryptography.hazmat.primitives.serialization import pkcs12
 from flask import Blueprint, Response, request
 
 from auth.unified import AuthManager, has_permission
-from models import Certificate
+from models import Certificate, db
+from sqlalchemy import update
 from utils.key_codec import load_pem_bytes
 from utils.response import error_response, success_response
 
@@ -68,7 +69,26 @@ def _find_private_key(certificate):
         raise ValueError('Multiple UCM private keys match the certificate')
     if not matches:
         return None
-    return load_pem_bytes(matches[0].prv, context=f'certificate {matches[0].id}')
+    row = matches[0]
+    return row.id, load_pem_bytes(row.prv, context=f'certificate {row.id}')
+
+
+def _consume_private_key(row_id):
+    updated = db.session.execute(
+        update(Certificate)
+        .where(Certificate.id == row_id, Certificate.prv.isnot(None))
+        .values(prv=None)
+    ).rowcount
+    if updated != 1:
+        db.session.rollback()
+        return False
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        logger.exception('Private-key export consumption failed')
+        return False
+    return True
 
 
 def _named_cas(certificates):
@@ -125,9 +145,11 @@ def export_certificate_for_gateway():
     try:
         cert_der = _decode_der(data.get('certificate'), 'certificate')
         certificate = x509.load_der_x509_certificate(cert_der, default_backend())
-        key_pem = _find_private_key(certificate)
-        if not key_pem:
+        matched = _find_private_key(certificate)
+        if not matched:
             return error_response('Certificate private key is not available in UCM', 404)
+        row_id, key_pem = matched
+        db.session.rollback()
         private_key = serialization.load_pem_private_key(key_pem, password=None, backend=default_backend())
         chain = [
             x509.load_der_x509_certificate(_decode_der(item, 'chain certificate'), default_backend())
@@ -144,21 +166,19 @@ def export_certificate_for_gateway():
                     serialization.PrivateFormat.PKCS8,
                     serialization.BestAvailableEncryption(password.encode()),
                 )
-            return Response(result, mimetype='application/x-pem-file', headers={
+            response = Response(result, mimetype='application/x-pem-file', headers={
                 'Content-Disposition': f'attachment; filename="{filename}.key"',
             })
-
-        if export_format == 'pem':
+        elif export_format == 'pem':
             result = certificate.public_bytes(serialization.Encoding.PEM)
             result += b'\n' + key_pem
             for item in chain:
                 result += b'\n' + item.public_bytes(serialization.Encoding.PEM)
             suffix = '_full_chain' if chain else '_with_key'
-            return Response(result, mimetype='application/x-pem-file', headers={
+            response = Response(result, mimetype='application/x-pem-file', headers={
                 'Content-Disposition': f'attachment; filename="{filename}{suffix}.pem"',
             })
-
-        if export_format in ('pkcs12', 'pfx'):
+        elif export_format in ('pkcs12', 'pfx'):
             result = pkcs12.serialize_key_and_certificates(
                 name=filename.encode(),
                 key=private_key,
@@ -167,28 +187,32 @@ def export_certificate_for_gateway():
                 encryption_algorithm=serialization.BestAvailableEncryption(password.encode()),
             )
             extension = 'pfx' if export_format == 'pfx' else 'p12'
-            return Response(result, mimetype='application/x-pkcs12', headers={
+            response = Response(result, mimetype='application/x-pkcs12', headers={
                 'Content-Disposition': f'attachment; filename="{filename}.{extension}"',
             })
+        else:
+            import jks
+            key_pkcs8 = private_key.private_bytes(
+                serialization.Encoding.DER,
+                serialization.PrivateFormat.PKCS8,
+                serialization.NoEncryption(),
+            )
+            cert_chain = [('X.509', certificate.public_bytes(serialization.Encoding.DER))]
+            cert_chain.extend(('X.509', item.public_bytes(serialization.Encoding.DER)) for item in chain)
+            entry = jks.PrivateKeyEntry(
+                alias=filename.lower().replace(' ', '-'),
+                cert_chain=cert_chain,
+                pkey_pkcs8=key_pkcs8,
+                timestamp=0,
+            )
+            result = jks.KeyStore.new('jks', [entry]).saves(password)
+            response = Response(result, mimetype='application/x-java-keystore', headers={
+                'Content-Disposition': f'attachment; filename="{filename}.jks"',
+            })
 
-        import jks
-        key_pkcs8 = private_key.private_bytes(
-            serialization.Encoding.DER,
-            serialization.PrivateFormat.PKCS8,
-            serialization.NoEncryption(),
-        )
-        cert_chain = [('X.509', certificate.public_bytes(serialization.Encoding.DER))]
-        cert_chain.extend(('X.509', item.public_bytes(serialization.Encoding.DER)) for item in chain)
-        entry = jks.PrivateKeyEntry(
-            alias=filename.lower().replace(' ', '-'),
-            cert_chain=cert_chain,
-            pkey_pkcs8=key_pkcs8,
-            timestamp=0,
-        )
-        result = jks.KeyStore.new('jks', [entry]).saves(password)
-        return Response(result, mimetype='application/x-java-keystore', headers={
-            'Content-Disposition': f'attachment; filename="{filename}.jks"',
-        })
+        if not _consume_private_key(row_id):
+            return error_response('Certificate private key is no longer available in UCM', 404)
+        return response
     except ValueError as exc:
         logger.warning('Private-key export rejected: %s', exc)
         return error_response(str(exc), 400)
