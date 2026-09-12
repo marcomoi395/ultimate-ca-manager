@@ -214,12 +214,12 @@ export default function CertificatesPage() {
   }, [urlCertId, loading, certificates.length])
 
   // Export certificate
-  const handleExport = async (format) => {
+  const handleExport = async (format, options = {}) => {
     if (!selectedCert) return
-    
+
     try {
       const serial = selectedCert.serial_number || selectedCert.id
-      const blob = await certificatesService.exportPublic(serial, selectedCert.issuer, format)
+      const blob = await certificatesService.exportPublic(serial, selectedCert.issuer, format, options)
       const ext = { pem: 'pem', der: 'der', pkcs7: 'p7b' }[format] || format
       downloadBlob(blob, `${selectedCert.common_name || 'certificate'}.${ext}`)
       showSuccess(t('messages.success.export.certificate'))
@@ -446,12 +446,12 @@ export default function CertificatesPage() {
     ] : [])
   ], [canWrite, canDelete, t])
   // Export from row via ExportModal
-  const handleExportRow = async (format) => {
+  const handleExportRow = async (format, options = {}) => {
     if (!exportRowCert) return
     const cert = exportRowCert
     try {
       const serial = cert.serial_number || cert.id
-      const blob = await certificatesService.exportPublic(serial, cert.issuer, format)
+      const blob = await certificatesService.exportPublic(serial, cert.issuer, format, options)
       const ext = { pem: 'pem', der: 'der', pkcs7: 'p7b' }[format] || format
       downloadBlob(blob, `${cert.common_name || cert.cn || 'certificate'}.${ext}`)
       showSuccess(t('messages.success.export.certificate'))
@@ -716,7 +716,7 @@ export default function CertificatesPage() {
         entityName={exportRowCert?.common_name || exportRowCert?.subject || ''}
         hasPrivateKey={false}
         canExportKey={false}
-        showChainOption={false}
+        showChainOption={true}
         onExport={handleExportRow}
       />
     </>

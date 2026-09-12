@@ -28,6 +28,39 @@ interface CertificateExport {
   filename: string;
 }
 
+function asBuffer(value: unknown): Buffer | undefined {
+  if (Buffer.isBuffer(value)) return value;
+  if (value instanceof Uint8Array) return Buffer.from(value);
+  if (typeof value !== 'string') return undefined;
+  const compact = value.replace(/\s/g, '');
+  if (/^-----BEGIN CERTIFICATE-----/.test(value)) return Buffer.from(value);
+  try { return Buffer.from(compact, 'base64'); } catch { return undefined; }
+}
+
+function parseCertificateChain(value: unknown): Buffer[] {
+  if (Array.isArray(value)) return value.flatMap((item) => parseCertificateChain(item));
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    const record = value as Record<string, unknown>;
+    for (const key of ['certificate_chain', 'certificateChain', 'certificates', 'data']) {
+      if (record[key] !== undefined) return parseCertificateChain(record[key]);
+    }
+  }
+  const bytes = asBuffer(value);
+  if (!bytes) return [];
+  const pemMatches = bytes.toString().match(/-----BEGIN CERTIFICATE-----[\s\S]*?-----END CERTIFICATE-----/g);
+  if (pemMatches?.length) return pemMatches.map((pem) => Buffer.from(pem.replace(/-----BEGIN CERTIFICATE-----|-----END CERTIFICATE-----|\s/g, ''), 'base64'));
+  const parsed = asn1js.fromBER(new Uint8Array(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)));
+  if (parsed.offset === -1) return [];
+  try {
+    const contentInfo = new pkijs.ContentInfo({ schema: parsed.result });
+    if (contentInfo.contentType !== pkijs.ContentInfo.SIGNED_DATA) return [bytes];
+    const signedData = new pkijs.SignedData({ schema: contentInfo.content });
+    return (signedData.certificates ?? []).map((certificate) => Buffer.from(certificate.toSchema().toBER()));
+  } catch {
+    return [bytes];
+  }
+}
+
 function field(record: Record<string, unknown>, names: string[]): string | undefined {
   for (const name of names) {
     if (typeof record[name] === 'string') return record[name] as string;
@@ -80,6 +113,15 @@ export class CertificatesService {
     };
   }
 
+  removed(): Promise<never> { throw new GoneException('GATEWAY_ENDPOINT_REMOVED'); }
+  compliance(): Promise<never> { return this.removed(); }
+  lintStatus(): Promise<never> { return this.removed(); }
+  async getById(id: string, issuer?: string): Promise<unknown> {
+    const record = await this.getCertificateRecord(id, issuer);
+    const [current] = await this.refreshRevocationStatuses([record]);
+    return mapCertificatePublicData(current);
+  }
+
   async stats(): Promise<unknown> {
     const result = this.reader
       ? await this.reader({ page: 1, limit: 100 })
@@ -97,34 +139,12 @@ export class CertificatesService {
       sources.add(source);
       const isRevoked = record.revoked === true || String(record.status ?? '').toUpperCase().includes('REVOK');
       const validTo = Date.parse(String(record.valid_to ?? record.validTo ?? ''));
-      if (isRevoked) {
-        revoked += 1;
-      } else if (validTo <= now) {
-        expired += 1;
-      } else if (validTo <= threshold) {
-        expiring += 1;
-      } else {
-        valid += 1;
-      }
+      if (isRevoked) revoked += 1;
+      else if (validTo <= now) expired += 1;
+      else if (validTo <= threshold) expiring += 1;
+      else valid += 1;
     }
     return { total: records.length, valid, expiring, expired, revoked, sources: [...sources].sort() };
-  }
-
-  removed(): Promise<never> {
-    throw new GoneException('GATEWAY_ENDPOINT_REMOVED');
-  }
-
-  compliance(): Promise<never> { return this.removed(); }
-
-  lintStatus(): Promise<never> { return this.removed(); }
-  async getById(id: string, issuer?: string): Promise<unknown> {
-    const record = await this.getCertificateRecord(id, issuer);
-    const [current] = await this.refreshRevocationStatuses([record]);
-    return mapCertificatePublicData(current);
-  }
-
-  mutate(): Promise<never> {
-    throw new NotImplementedException('Certificate mutations are owned by UCM and are not exposed by EJBCA REST');
   }
 
   async exportFile(id: string, body: unknown): Promise<CertificateExport> {
@@ -135,16 +155,15 @@ export class CertificatesService {
     if (typeof request.issuer !== 'string' || !request.issuer) {
       throw new BadRequestException('issuer is required for certificate export');
     }
+    if (request.include_chain !== undefined && typeof request.include_chain !== 'boolean') {
+      throw new BadRequestException('include_chain must be a boolean');
+    }
 
     const requestedFormat = String(request.format ?? 'pem').toLowerCase();
     let format: CertificateExportFormat;
-    if (requestedFormat === 'pkcs7' || requestedFormat === 'p7b') {
-      format = 'p7b';
-    } else if (requestedFormat === 'pem' || requestedFormat === 'der') {
-      format = requestedFormat;
-    } else {
-      throw new BadRequestException(`Unsupported export format: ${requestedFormat}`);
-    }
+    if (requestedFormat === 'pkcs7' || requestedFormat === 'p7b') format = 'p7b';
+    else if (requestedFormat === 'pem' || requestedFormat === 'der') format = requestedFormat;
+    else throw new BadRequestException(`Unsupported export format: ${requestedFormat}`);
 
     const record = await this.getCertificateRecord(id, request.issuer);
     const encoded = field(record, ['base64Cert', 'certificate']);
@@ -155,43 +174,47 @@ export class CertificatesService {
     const der = /^[A-Za-z0-9+/]+={0,2}$/.test(nestedBase64) && nestedBase64.length % 4 === 0
       ? Buffer.from(nestedBase64, 'base64')
       : firstPass;
-    const parsed = asn1js.fromBER(der.buffer.slice(der.byteOffset, der.byteOffset + der.byteLength));
+    const parsed = asn1js.fromBER(new Uint8Array(der));
     if (parsed.offset === -1) throw new BadGatewayException('EJBCA returned an invalid DER certificate');
     let certificate: pkijs.Certificate;
-    try {
-      certificate = new pkijs.Certificate({ schema: parsed.result });
-    } catch {
-      throw new BadGatewayException('EJBCA returned a certificate that is not valid X.509 DER');
-    }
+    try { certificate = new pkijs.Certificate({ schema: parsed.result }); }
+    catch { throw new BadGatewayException('EJBCA returned a certificate that is not valid X.509 DER'); }
+
     const filenameBase = id.replace(/[^A-Za-z0-9._-]/g, '_') || 'certificate';
+    let chain: Buffer[] = [];
+    if (request.include_chain === true && format !== 'der') {
+      const rawChain = await this.adapter!.getCertificateChain(request.issuer);
+      chain = parseCertificateChain(rawChain).filter((item) => !item.equals(der));
+      if (chain.length === 0) throw new BadGatewayException('EJBCA returned an empty certificate chain');
+      for (const item of chain) {
+        const itemParsed = asn1js.fromBER(new Uint8Array(item));
+        if (itemParsed.offset === -1) throw new BadGatewayException('EJBCA returned an invalid certificate chain');
+        try { new pkijs.Certificate({ schema: itemParsed.result }); }
+        catch { throw new BadGatewayException('EJBCA returned an invalid certificate chain'); }
+      }
+    }
 
     if (format === 'pem') {
-      const base64 = der.toString('base64').match(/.{1,64}/g)?.join('\n');
-      return {
-        data: Buffer.from(`-----BEGIN CERTIFICATE-----\n${base64}\n-----END CERTIFICATE-----\n`),
-        type: 'application/x-pem-file',
-        filename: `${filenameBase}.pem`,
-      };
+      const pem = [der, ...chain].map((item) => {
+        const base64 = item.toString('base64').match(/.{1,64}/g)?.join('\n');
+        return `-----BEGIN CERTIFICATE-----\n${base64}\n-----END CERTIFICATE-----\n`;
+      }).join('');
+      return { data: Buffer.from(pem), type: 'application/x-pem-file', filename: `${filenameBase}${chain.length ? '_chain' : ''}.pem` };
     }
-    if (format === 'der') {
-      return { data: der, type: 'application/pkix-cert', filename: `${filenameBase}.der` };
-    }
+    if (format === 'der') return { data: der, type: 'application/pkix-cert', filename: `${filenameBase}.der` };
 
+    const certificates = [certificate, ...chain.map((item) => {
+      const itemParsed = asn1js.fromBER(new Uint8Array(item));
+      return new pkijs.Certificate({ schema: itemParsed.result });
+    })];
     const signedData = new pkijs.SignedData({
       version: 1,
       encapContentInfo: new pkijs.EncapsulatedContentInfo({ eContentType: pkijs.SignedData.ID_DATA }),
-      certificates: [certificate],
+      certificates,
       signerInfos: [],
     });
-    const contentInfo = new pkijs.ContentInfo({
-      contentType: pkijs.ContentInfo.SIGNED_DATA,
-      content: signedData.toSchema(),
-    });
-    return {
-      data: Buffer.from(contentInfo.toSchema().toBER()),
-      type: 'application/pkcs7-mime',
-      filename: `${filenameBase}.p7b`,
-    };
+    const contentInfo = new pkijs.ContentInfo({ contentType: pkijs.ContentInfo.SIGNED_DATA, content: signedData.toSchema() });
+    return { data: Buffer.from(contentInfo.toSchema().toBER()), type: 'application/pkcs7-mime', filename: `${filenameBase}${chain.length ? '_chain' : ''}.p7b` };
   }
   async issue(body: CertificateEnrollmentRequest, key?: string): Promise<unknown> {
     const claim = this.writes.claim(key, JSON.stringify(body));
@@ -204,6 +227,7 @@ export class CertificatesService {
     this.writes.audit({ actor_id: 'unknown', action: 'certificate.issue', correlation_id: 'unknown', outcome: 'success', metadata: { serial: result.serial_number } });
     return result;
   }
+  mutate(): Promise<never> { throw new NotImplementedException('Certificate mutations are owned by UCM and are not exposed by EJBCA REST'); }
 
   async revoke(id: string, body: { reason?: string; issuer?: string }, key?: string): Promise<unknown> {
     const claim = this.writes.claim(key, JSON.stringify({ id, ...body }));

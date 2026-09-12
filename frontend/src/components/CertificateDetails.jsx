@@ -585,7 +585,7 @@ export function CertificateDetails({
       entityName={cert.common_name || cert.subject}
       hasPrivateKey={publicExportOnly ? false : !!cert.has_private_key}
       canExportKey={publicExportOnly ? false : canWrite}
-      showChainOption={!publicExportOnly}
+      showChainOption={true}
       onExport={onExport}
     />
 

@@ -26,6 +26,12 @@ describe('EJBCA resource adapter', () => {
     await adapter.getRevocationStatus('CN=Example CA,O=Example', '00af12');
     expect(calls).toEqual([['/v1/certificate/CN%3DExample%20CA%2CO%3DExample/00af12/revocationstatus']]);
   });
+  it('maps CA certificate-chain download to the EJBCA CA endpoint', async () => {
+    const calls: unknown[][] = [];
+    const adapter = new EjbcaResourceAdapter({ request: async (...args) => { calls.push(args); return Buffer.from('chain'); } });
+    await adapter.getCertificateChain('CN=Example CA,O=Example');
+    expect(calls).toEqual([['/v1/ca/CN%3DExample%20CA%2CO%3DExample/certificate/download']]);
+  });
 
   it('maps client-generated-key enrollment to the verified EJBCA endpoint', async () => {
     const calls: unknown[][] = [];

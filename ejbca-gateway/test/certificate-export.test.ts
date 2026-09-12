@@ -16,6 +16,8 @@ const leafDer = Buffer.from(
 );
 const leafPem = Buffer.from(`-----BEGIN CERTIFICATE-----\n${leafDer.toString('base64').match(/.{1,64}/g)?.join('\n')}\n-----END CERTIFICATE-----\n`);
 const ejbcaBase64Cert = Buffer.from(leafDer.toString('base64')).toString('base64');
+const chainDer = Buffer.from(leafDer);
+chainDer[11] = 2;
 
 type ExportResult = {
   data: Buffer;
@@ -24,11 +26,12 @@ type ExportResult = {
 };
 
 type CertificateExportService = {
-  exportFile(serial: string, body: { format: string; issuer?: string }): Promise<ExportResult>;
+  exportFile(serial: string, body: { format: string; issuer?: string; include_chain?: boolean }): Promise<ExportResult>;
 };
 
-function exportingService(base64Cert = ejbcaBase64Cert) {
+function exportingService(base64Cert = ejbcaBase64Cert, chain: unknown = []) {
   const calls: Array<[string, string | undefined]> = [];
+  const chainCalls: string[] = [];
   const adapter = {
     getCertificate: async (requestedSerial: string, requestedIssuer?: string) => {
       calls.push([requestedSerial, requestedIssuer]);
@@ -40,9 +43,14 @@ function exportingService(base64Cert = ejbcaBase64Cert) {
         }],
       };
     },
+    getCertificateChain: async (requestedIssuer: string) => {
+      chainCalls.push(requestedIssuer);
+      return chain;
+    },
   } as never;
   return {
     calls,
+    chainCalls,
     service: new CertificatesService(adapter) as unknown as CertificateExportService,
   };
 }
@@ -118,6 +126,22 @@ describe('CertificatesService.exportFile', () => {
     });
     expect(readPkcs7(result.data).certificates).toHaveLength(1);
     expect(calls).toEqual([[serial, issuer]]);
+  });
+  it('includes EJBCA CA chain certificates in PEM when requested', async () => {
+    const { service, chainCalls } = exportingService(ejbcaBase64Cert, [chainDer.toString('base64')]);
+
+    const result = await service.exportFile(serial, { format: 'pem', issuer, include_chain: true });
+
+    expect((result.data.toString().match(/-----BEGIN CERTIFICATE-----/g) ?? []).length).toBe(2);
+    expect(chainCalls).toEqual([issuer]);
+  });
+
+  it('includes EJBCA CA chain certificates in PKCS#7 when requested', async () => {
+    const { service } = exportingService(ejbcaBase64Cert, [chainDer.toString('base64')]);
+
+    const result = await service.exportFile(serial, { format: 'p7b', issuer, include_chain: true });
+
+    expect(readPkcs7(result.data).certificates).toHaveLength(2);
   });
 
   it('pages every serial match before binding the requested issuer', async () => {

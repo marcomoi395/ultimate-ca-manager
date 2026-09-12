@@ -57,10 +57,11 @@ export const certificatesService = {
     }, { responseType: 'blob' })
   },
 
-  async exportPublic(serial, issuer, format = 'pem') {
+  async exportPublic(serial, issuer, format = 'pem', options = {}) {
     return apiClient.post(`/certificates/${serial}/export`, {
       format,
       issuer,
+      include_chain: options.includeChain ?? false,
     }, { apiVersion: 'v3', responseType: 'blob' })
   },
 

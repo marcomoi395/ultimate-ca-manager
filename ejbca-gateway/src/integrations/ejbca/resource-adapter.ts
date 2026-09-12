@@ -58,6 +58,10 @@ export class EjbcaResourceAdapter {
   getRevocationStatus(issuer: string, serial: string): Promise<unknown> {
     return this.client.request(`/v1/certificate/${encodeURIComponent(issuer)}/${encodeURIComponent(serial)}/revocationstatus`);
   }
+  getCertificateChain(issuer: string): Promise<unknown> {
+    return this.client.request(`/v1/ca/${encodeURIComponent(issuer)}/certificate/download`);
+  }
+
 
 
   listCas(query?: URLSearchParams): Promise<unknown> {

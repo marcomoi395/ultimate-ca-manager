@@ -106,7 +106,7 @@ export function FloatingDetailWindow({ windowInfo }) {
       const id = windowInfo.entityId
       const name = data?.cn || data?.common_name || data?.name || windowInfo.type
       const res = windowInfo.type === 'certificate'
-        ? await certificatesService.exportPublic(data?.serial_number || id, data?.issuer, format)
+        ? await certificatesService.exportPublic(data?.serial_number || id, data?.issuer, format, options)
         : await config.service().export(id, format, options)
       const blob = res instanceof Blob ? res : new Blob([res.data || res], { type: 'application/octet-stream' })
       const url = URL.createObjectURL(blob)
@@ -254,7 +254,7 @@ export function FloatingDetailWindow({ windowInfo }) {
     onExport: handleExport,
     hasPrivateKey: isCert ? false : hasPrivateKey,
     canExportKey: isCert ? false : canWrite(resource),
-    showChainOption: !isCert,
+    showChainOption: true,
     entityType: isCA ? 'ca' : 'certificate',
     entityName: title,
     onLint: (isCert || isUserCert) ? () => setLintOpen(true) : null,
