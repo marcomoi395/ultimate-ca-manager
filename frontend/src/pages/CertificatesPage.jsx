@@ -220,11 +220,11 @@ export default function CertificatesPage() {
     try {
       const serial = selectedCert.serial_number || selectedCert.id
       const blob = await certificatesService.exportPublic(serial, selectedCert.issuer, format, options)
-      const ext = { pem: 'pem', der: 'der', pkcs7: 'p7b' }[format] || format
+      const ext = { pem: 'pem', der: 'der', pkcs7: 'p7b', pkcs12: 'p12', pfx: 'pfx', jks: 'jks', key: 'key' }[format] || format
       downloadBlob(blob, `${selectedCert.common_name || 'certificate'}.${ext}`)
       showSuccess(t('messages.success.export.certificate'))
-    } catch {
-      showError(t('messages.errors.exportFailed.certificate'))
+    } catch (err) {
+      showError(err?.message || t('messages.errors.exportFailed.certificate'))
     }
   }
 
@@ -452,11 +452,11 @@ export default function CertificatesPage() {
     try {
       const serial = cert.serial_number || cert.id
       const blob = await certificatesService.exportPublic(serial, cert.issuer, format, options)
-      const ext = { pem: 'pem', der: 'der', pkcs7: 'p7b' }[format] || format
+      const ext = { pem: 'pem', der: 'der', pkcs7: 'p7b', pkcs12: 'p12', pfx: 'pfx', jks: 'jks', key: 'key' }[format] || format
       downloadBlob(blob, `${cert.common_name || cert.cn || 'certificate'}.${ext}`)
       showSuccess(t('messages.success.export.certificate'))
-    } catch {
-      showError(t('messages.errors.exportFailed.certificate'))
+    } catch (err) {
+      showError(err?.message || t('messages.errors.exportFailed.certificate'))
     }
   }
 
@@ -579,7 +579,7 @@ export default function CertificatesPage() {
       onAddToTrustStore={handleAddToTrustStore}
       canWrite={canWrite('certificates')}
       canDelete={canDelete('certificates')}
-      publicExportOnly
+      allowPrivateExport={hasPermission('read:private_keys')}
     />
   ) : null
 
@@ -714,8 +714,8 @@ export default function CertificatesPage() {
         onClose={() => setExportRowCert(null)}
         entityType="certificate"
         entityName={exportRowCert?.common_name || exportRowCert?.subject || ''}
-        hasPrivateKey={false}
-        canExportKey={false}
+        hasPrivateKey={hasPermission('read:private_keys')}
+        canExportKey={hasPermission('read:private_keys')}
         showChainOption={true}
         onExport={handleExportRow}
       />

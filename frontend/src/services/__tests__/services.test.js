@@ -240,7 +240,7 @@ describe('certificatesService', () => {
     await certificatesService.exportPublic('serial-1', 'CN=Issuer', 'pkcs7', { includeChain: true })
     const call = mockApiClient.post.mock.calls.find(c => c[0].includes('/certificates/serial-1/export'))
     expect(call[0]).toBe('/certificates/serial-1/export')
-    expect(call[1]).toEqual({ format: 'pkcs7', issuer: 'CN=Issuer', include_chain: true })
+    expect(call[1]).toEqual({ format: 'pkcs7', issuer: 'CN=Issuer', include_key: false, include_chain: true, password: undefined })
     expect(call[2]).toEqual({ apiVersion: 'v3', responseType: 'blob' })
   })
 

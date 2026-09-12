@@ -67,8 +67,8 @@ export class CertificatesController {
 
   @Post(':id/export')
   @RequirePermission('read:certificates')
-  async export(@Param('id') id: string, @Body() body: unknown) {
-    const result = await this.service.exportFile(id, body);
+  async export(@Param('id') id: string, @Body() body: unknown, @Headers() headers: Record<string, string | string[] | undefined>) {
+    const result = await this.service.exportFile(id, body, headers);
     return new StreamableFile(result.data, {
       type: result.type,
       disposition: `attachment; filename="${result.filename}"`,

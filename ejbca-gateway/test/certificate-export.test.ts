@@ -26,8 +26,28 @@ type ExportResult = {
 };
 
 type CertificateExportService = {
-  exportFile(serial: string, body: { format: string; issuer?: string; include_chain?: boolean }): Promise<ExportResult>;
+  exportFile(serial: string, body: { format: string; issuer?: string; include_chain?: boolean; include_key?: boolean; password?: string }, headers?: Record<string, string>): Promise<ExportResult>;
 };
+
+function privateKeyExportingService() {
+  const adapter = {
+    getCertificate: async () => ({ certificates: [{ serialNumber: serial, issuerDN: issuer, base64Cert: ejbcaBase64Cert }] }),
+    getCertificateChain: async () => [],
+  } as never;
+  const proxy = {
+    request: async (_path: string, request: { body?: string }) => {
+      const body = JSON.parse(request.body ?? '{}');
+      expect(body.format).toBe('pkcs12');
+      expect(body.password).toBe('export-password');
+      return {
+        status: 200,
+        headers: new Headers({ 'content-type': 'application/x-pkcs12', 'content-disposition': 'attachment; filename="cert.p12"' }),
+        body: Uint8Array.from([1, 2, 3]).buffer,
+      };
+    },
+  } as never;
+  return new CertificatesService(adapter, undefined, proxy) as unknown as CertificateExportService;
+}
 
 function exportingService(base64Cert = ejbcaBase64Cert, chain: unknown = []) {
   const calls: Array<[string, string | undefined]> = [];
@@ -179,6 +199,21 @@ describe('CertificatesService.exportFile', () => {
 
     await expect(service.exportFile(serial, { format: 'pem' })).rejects.toMatchObject({ status: 400 });
     expect(calls).toEqual([]);
+  });
+  it('forwards PKCS12 export to UCM with password and returns binary attachment', async () => {
+    const service = privateKeyExportingService();
+    const result = await service.exportFile(serial, { format: 'pkcs12', issuer, include_key: true, password: 'export-password' });
+    expect(result).toEqual({ data: Buffer.from([1, 2, 3]), type: 'application/x-pkcs12', filename: 'cert.p12' });
+  });
+
+  it('rejects include_key with public-only formats', async () => {
+    const { service } = exportingService();
+    await expect(service.exportFile(serial, { format: 'der', issuer, include_key: true })).rejects.toMatchObject({ status: 400 });
+  });
+
+  it('rejects private-key formats when UCM proxy is unavailable', async () => {
+    const { service } = exportingService();
+    await expect(service.exportFile(serial, { format: 'jks', issuer, password: 'export-password' })).rejects.toMatchObject({ status: 502 });
   });
 
   it('rejects unsupported certificate export formats', async () => {

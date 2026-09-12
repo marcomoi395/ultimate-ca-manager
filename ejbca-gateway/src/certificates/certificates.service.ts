@@ -1,7 +1,8 @@
-import { BadGatewayException, BadRequestException, Injectable, ConflictException, GoneException, Inject, NotFoundException, NotImplementedException, Optional } from '@nestjs/common';
+import { BadGatewayException, BadRequestException, ConflictException, ForbiddenException, GoneException, Inject, Injectable, NotFoundException, NotImplementedException, Optional, UnauthorizedException } from '@nestjs/common';
 import * as asn1js from 'asn1js';
 import * as pkijs from 'pkijs';
 import { CertificateWriteInfrastructure } from './write-infrastructure';
+import { UcmProxyClient } from '../common/v2-auth.client';
 import { EjbcaResourceAdapter } from '../integrations/ejbca/resource-adapter';
 import { mapCertificatePublicData } from './public-mapper';
 import type { CertificateListQuery } from './dtos/certificate-list.query';
@@ -20,7 +21,7 @@ export interface CertificateReadResult {
   meta: { page: number; per_page: number; total: number };
 }
 
-type CertificateExportFormat = 'pem' | 'der' | 'p7b';
+type CertificateExportFormat = 'pem' | 'der' | 'p7b' | 'key' | 'pkcs12' | 'pfx' | 'jks';
 
 interface CertificateExport {
   data: Buffer;
@@ -76,6 +77,7 @@ export class CertificatesService {
   constructor(
     @Inject(EjbcaResourceAdapter) source: EjbcaResourceAdapter | CertificateReader,
     @Optional() @Inject(CertificateWriteInfrastructure) private readonly writes = new CertificateWriteInfrastructure(),
+    @Optional() private readonly ucmProxy?: UcmProxyClient,
   ) {
     if (typeof source === 'function') this.reader = source;
     else this.adapter = source;
@@ -145,9 +147,9 @@ export class CertificatesService {
       else valid += 1;
     }
     return { total: records.length, valid, expiring, expired, revoked, sources: [...sources].sort() };
-  }
 
-  async exportFile(id: string, body: unknown): Promise<CertificateExport> {
+  }
+  async exportFile(id: string, body: unknown, headers: Record<string, string | string[] | undefined> = {}): Promise<CertificateExport> {
     if (!body || typeof body !== 'object' || Array.isArray(body)) {
       throw new BadRequestException('Export body must be a JSON object');
     }
@@ -158,17 +160,18 @@ export class CertificatesService {
     if (request.include_chain !== undefined && typeof request.include_chain !== 'boolean') {
       throw new BadRequestException('include_chain must be a boolean');
     }
-
     const requestedFormat = String(request.format ?? 'pem').toLowerCase();
-    let format: CertificateExportFormat;
-    if (requestedFormat === 'pkcs7' || requestedFormat === 'p7b') format = 'p7b';
-    else if (requestedFormat === 'pem' || requestedFormat === 'der') format = requestedFormat;
-    else throw new BadRequestException(`Unsupported export format: ${requestedFormat}`);
+    const format = requestedFormat === 'pkcs7' ? 'p7b' : requestedFormat as CertificateExportFormat;
+    if (!['pem', 'der', 'p7b', 'key', 'pkcs12', 'pfx', 'jks'].includes(format)) {
+      throw new BadRequestException(`Unsupported export format: ${requestedFormat}`);
+    }
+    if (['pkcs12', 'pfx', 'jks'].includes(format) && (typeof request.password !== 'string' || !request.password)) {
+      throw new BadRequestException(`Password required for ${format.toUpperCase()} export`);
+    }
 
     const record = await this.getCertificateRecord(id, request.issuer);
     const encoded = field(record, ['base64Cert', 'certificate']);
     if (!encoded) throw new BadGatewayException('EJBCA certificate search did not return certificate bytes');
-
     const firstPass = Buffer.from(encoded.replace(/\s/g, ''), 'base64');
     const nestedBase64 = firstPass.toString('ascii').replace(/\s/g, '');
     const der = /^[A-Za-z0-9+/]+={0,2}$/.test(nestedBase64) && nestedBase64.length % 4 === 0
@@ -179,11 +182,21 @@ export class CertificatesService {
     let certificate: pkijs.Certificate;
     try { certificate = new pkijs.Certificate({ schema: parsed.result }); }
     catch { throw new BadGatewayException('EJBCA returned a certificate that is not valid X.509 DER'); }
+    if (request.include_key === true && ['der', 'p7b'].includes(format)) {
+      throw new BadRequestException('include_key is not supported for DER or P7B export');
+    }
 
+    if (format === 'key' || format === 'pkcs12' || format === 'pfx' || format === 'jks' || request.include_key === true) {
+      return this.exportWithPrivateKey(id, request, der, headers);
+    }
+    return this.exportPublic(id, request, der, format, certificate);
+  }
+
+  private async exportPublic(id: string, request: Record<string, unknown>, der: Buffer, format: 'pem' | 'der' | 'p7b', certificate: pkijs.Certificate): Promise<CertificateExport> {
     const filenameBase = id.replace(/[^A-Za-z0-9._-]/g, '_') || 'certificate';
     let chain: Buffer[] = [];
     if (request.include_chain === true && format !== 'der') {
-      const rawChain = await this.adapter!.getCertificateChain(request.issuer);
+      const rawChain = await this.adapter!.getCertificateChain(request.issuer as string);
       chain = parseCertificateChain(rawChain).filter((item) => !item.equals(der));
       if (chain.length === 0) throw new BadGatewayException('EJBCA returned an empty certificate chain');
       for (const item of chain) {
@@ -193,20 +206,12 @@ export class CertificatesService {
         catch { throw new BadGatewayException('EJBCA returned an invalid certificate chain'); }
       }
     }
-
     if (format === 'pem') {
-      const pem = [der, ...chain].map((item) => {
-        const base64 = item.toString('base64').match(/.{1,64}/g)?.join('\n');
-        return `-----BEGIN CERTIFICATE-----\n${base64}\n-----END CERTIFICATE-----\n`;
-      }).join('');
+      const pem = [der, ...chain].map((item) => `-----BEGIN CERTIFICATE-----\n${item.toString('base64').match(/.{1,64}/g)?.join('\n')}\n-----END CERTIFICATE-----\n`).join('');
       return { data: Buffer.from(pem), type: 'application/x-pem-file', filename: `${filenameBase}${chain.length ? '_chain' : ''}.pem` };
     }
     if (format === 'der') return { data: der, type: 'application/pkix-cert', filename: `${filenameBase}.der` };
-
-    const certificates = [certificate, ...chain.map((item) => {
-      const itemParsed = asn1js.fromBER(new Uint8Array(item));
-      return new pkijs.Certificate({ schema: itemParsed.result });
-    })];
+    const certificates = [certificate, ...chain.map((item) => new pkijs.Certificate({ schema: asn1js.fromBER(new Uint8Array(item)).result }))];
     const signedData = new pkijs.SignedData({
       version: 1,
       encapContentInfo: new pkijs.EncapsulatedContentInfo({ eContentType: pkijs.SignedData.ID_DATA }),
@@ -215,6 +220,48 @@ export class CertificatesService {
     });
     const contentInfo = new pkijs.ContentInfo({ contentType: pkijs.ContentInfo.SIGNED_DATA, content: signedData.toSchema() });
     return { data: Buffer.from(contentInfo.toSchema().toBER()), type: 'application/pkcs7-mime', filename: `${filenameBase}${chain.length ? '_chain' : ''}.p7b` };
+  }
+
+  private async exportWithPrivateKey(id: string, request: Record<string, unknown>, der: Buffer, headers: Record<string, string | string[] | undefined>): Promise<CertificateExport> {
+    if (!this.ucmProxy) throw new BadGatewayException('UCM private-key export is unavailable');
+    const rawChain = request.include_chain === true ? await this.adapter!.getCertificateChain(request.issuer as string) : [];
+    const chain = parseCertificateChain(rawChain).filter((item) => !item.equals(der));
+    const response = await this.ucmProxy.request('/internal/certificates/export', {
+      method: 'POST',
+      body: JSON.stringify({ certificate: der.toString('base64'), chain: chain.map((item) => item.toString('base64')), filename: id, format: String(request.format ?? 'pem').toLowerCase(), include_key: true, password: request.password }),
+      headers: { 'content-type': 'application/json', ...this.forwardHeaders(headers) },
+      responseType: 'binary',
+    });
+    const responseBytes = response.body instanceof ArrayBuffer ? Buffer.from(response.body) : Buffer.from(response.body as Uint8Array);
+    if (response.status >= 400) {
+      let message = 'UCM private-key export failed';
+      try {
+        const payload = JSON.parse(responseBytes.toString('utf8')) as { message?: string; detail?: string };
+        message = payload.message || payload.detail || message;
+      } catch {
+        // Keep a generic message for non-JSON upstream errors.
+      }
+      if (response.status === 400) throw new BadRequestException(message);
+      if (response.status === 401) throw new UnauthorizedException(message);
+      if (response.status === 403) throw new ForbiddenException(message);
+      if (response.status === 404) throw new NotFoundException(message);
+      throw new BadGatewayException(message);
+    }
+    const data = responseBytes;
+    const type = response.headers.get('content-type') ?? 'application/octet-stream';
+    const disposition = response.headers.get('content-disposition') ?? '';
+    const extension = request.format === 'jks' ? 'jks' : request.format === 'pfx' ? 'pfx' : request.format === 'pkcs12' ? 'p12' : request.format === 'key' ? 'key' : 'pem';
+    const filename = disposition.match(/filename="?([^";]+)"?/i)?.[1] ?? `${id}.${extension}`;
+    return { data, type, filename };
+  }
+
+  private forwardHeaders(headers: Record<string, string | string[] | undefined>): Record<string, string> {
+    const forwarded: Record<string, string> = {};
+    for (const name of ['cookie', 'x-api-key', 'x-csrf-token']) {
+      const value = headers[name];
+      if (typeof value === 'string') forwarded[name] = value;
+    }
+    return forwarded;
   }
   async issue(body: CertificateEnrollmentRequest, key?: string): Promise<unknown> {
     const claim = this.writes.claim(key, JSON.stringify(body));

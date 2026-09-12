@@ -61,7 +61,9 @@ export const certificatesService = {
     return apiClient.post(`/certificates/${serial}/export`, {
       format,
       issuer,
+      include_key: options.includeKey ?? false,
       include_chain: options.includeChain ?? false,
+      password: options.password,
     }, { apiVersion: 'v3', responseType: 'blob' })
   },
 

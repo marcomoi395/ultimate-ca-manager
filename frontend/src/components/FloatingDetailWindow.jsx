@@ -118,7 +118,7 @@ export function FloatingDetailWindow({ windowInfo }) {
       URL.revokeObjectURL(url)
       showSuccess(t('common.exported'))
     } catch (err) {
-      showError(t('common.exportFailed'))
+      showError(err?.message || t('common.exportFailed'))
     }
   }
 
@@ -252,8 +252,8 @@ export function FloatingDetailWindow({ windowInfo }) {
   const resource = isCA ? 'cas' : isUserCert ? 'user_certificates' : 'certificates'
   const actionBarProps = data ? {
     onExport: handleExport,
-    hasPrivateKey: isCert ? false : hasPrivateKey,
-    canExportKey: isCert ? false : canWrite(resource),
+    hasPrivateKey: isCert ? hasPermission('read:private_keys') : hasPrivateKey,
+    canExportKey: isCert ? hasPermission('read:private_keys') : canWrite(resource),
     showChainOption: true,
     entityType: isCA ? 'ca' : 'certificate',
     entityName: title,
