@@ -1,0 +1,35 @@
+export const CERTIFICATE_ROUTE_PARITY = {
+  readPermission: 'read:certificates',
+  writes: {
+    'POST /certificates': { permission: 'write:certificates', operation: 'POST /v1/certificate/enroll' },
+    'POST /certificates/:id/revoke': { permission: 'delete:certificates', operation: 'PUT /v1/certificate/:issuer/:serial/revoke' },
+    'POST /certificates/:id/unhold': { permission: 'write:certificates', operation: 'PUT /v1/certificate/:issuer/:serial/revoke?reason=REMOVE_FROM_CRL' },
+  },
+  audit: { required: true, fields: ['actor_id', 'action', 'correlation_id', 'outcome', 'metadata'] },
+  idempotency: {
+    key: 'Idempotency-Key',
+    sameHash: 'replay',
+    differentHash: '409',
+    concurrency: 'single-claim',
+  },
+  retry: 'no-automatic-retry-after-side-effect-dispatch',
+  removed: [
+    'PATCH /certificates/:id',
+    'DELETE /certificates/:id',
+    'POST /certificates/:id/key',
+    'GET /certificates/compliance',
+    'GET /certificates/lint/status',
+    'GET /certificates/:id/lint',
+    'POST /certificates/:id/submit-ct',
+  ],
+  notImplemented: [
+    'POST /certificates/:id/renew',
+    'POST /certificates/export',
+    'POST /certificates/import',
+    'POST /certificates/bulk/:operation',
+    'POST /certificates/bulk/revoke',
+    'POST /certificates/bulk/renew',
+    'POST /certificates/bulk/delete',
+    'POST /certificates/bulk/export',
+  ],
+} as const;

@@ -1,0 +1,16 @@
+{
+  "http_status": 200,
+  "headers": {"content-type": "application/json"},
+  "request": {
+    "method": "PUT",
+    "path": "/v1/certificate/{issuer_dn}/{serial_number}/revoke",
+    "query": {"reason": "REMOVE_FROM_CRL"}
+  },
+  "body": {
+    "issuer_dn": "UID=c-0okrocekuvmckakov,CN=ManagementCA,O=EJBCA Container Quickstart",
+    "serial_number": "7500ebd46cb36f1a69b98292486fa7a73f710a1b",
+    "revocation_reason": "REMOVE_FROM_CRL",
+    "message": "Successfully revoked",
+    "revoked": false
+  }
+}

@@ -911,6 +911,7 @@ function SearchBar({
                     value={filter.value || []}
                     onChange={filter.onChange}
                     placeholder={filter.placeholder || t('common.all')}
+                    disabled={filter.disabled}
                   />
                 )
               }

@@ -1,0 +1,1291 @@
+{
+  "info": {
+    "name": "EJBCA Gateway API",
+    "description": "Generated from NestJS controllers in ejbca-gateway. Global prefix: /api/v3. Certificate read routes are executable; write/import/bulk routes are included with their current 501 contract.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "apikey",
+    "apikey": [
+      {
+        "key": "key",
+        "value": "x-api-key",
+        "type": "string"
+      },
+      {
+        "key": "value",
+        "value": "{{apiKey}}",
+        "type": "string"
+      },
+      {
+        "key": "in",
+        "value": "header",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8081/api/v3",
+      "type": "string"
+    },
+    {
+      "key": "apiKey",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "caId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "certificateId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "csrId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "templateId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "mscaId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "requestId",
+      "value": "1",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "health",
+      "item": [
+        {
+          "name": "GET health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "meta",
+      "item": [
+        {
+          "name": "GET contract metadata",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/meta/contract",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "meta",
+                "contract"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "system",
+      "item": [
+        {
+          "name": "GET chain repair status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/system/chain-repair",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "system",
+                "chain-repair"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET HSM status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/system/hsm-status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "system",
+                "hsm-status"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST system chain repair run",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/system/chain-repair/run",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "system",
+                "chain-repair",
+                "run"
+              ]
+            },
+            "description": "Runs the EJBCA chain repair operation.",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "cas",
+      "item": [
+        {
+          "name": "GET list CAs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/cas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cas"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET CA certificates",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/cas/{{caId}}/certificates",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cas",
+                ":caId",
+                "certificates"
+              ],
+              "variable": [
+                {
+                  "key": "caId",
+                  "value": "{{caId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET CA details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/cas/{{caId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cas",
+                ":caId"
+              ],
+              "variable": [
+                {
+                  "key": "caId",
+                  "value": "{{caId}}"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "certificates",
+      "item": [
+        {
+          "name": "GET list certificates",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/certificates",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "certificates"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET certificate stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/certificates/stats",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "certificates",
+                "stats"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET certificate details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/certificates/{{certificateId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "certificates",
+                ":certificateId"
+              ],
+              "variable": [
+                {
+                  "key": "certificateId",
+                  "value": "{{certificateId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST issue certificate",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/certificates",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "certificates"
+              ],
+              "variable": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"certificate_request\": \"{{csrBase64}}\",\n  \"certificate_profile_name\": \"{{certificateProfile}}\",\n  \"end_entity_profile_name\": \"{{endEntityProfile}}\",\n  \"certificate_authority_name\": \"{{caName}}\",\n  \"username\": \"{{ejbcaUsername}}\",\n  \"password\": \"{{ejbcaPassword}}\",\n  \"include_chain\": true,\n  \"response_format\": \"DER\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Issues through verified EJBCA enrollment. Do not commit secrets."
+          }
+        },
+        {
+          "name": "PATCH rename certificate (410)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"descr\": \"example.com certificate\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/certificates/{{certificateId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "certificates",
+                ":certificateId"
+              ],
+              "variable": [
+                {
+                  "key": "certificateId",
+                  "value": "{{certificateId}}"
+                }
+              ]
+            },
+            "description": "Current contract: 410 Gone. UCM metadata operation, not EJBCA passthrough."
+          }
+        },
+        {
+          "name": "POST revoke certificate",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/certificates/{{certificateId}}/revoke",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "certificates",
+                "{{certificateId}}",
+                "revoke"
+              ],
+              "variable": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"issuer\": \"{{issuerDn}}\",\n  \"reason\": \"CERTIFICATE_HOLD\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Revokes through EJBCA. Idempotency-Key enables replay protection."
+          }
+        },
+        {
+          "name": "POST unhold certificate",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/certificates/{{certificateId}}/unhold",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "certificates",
+                "{{certificateId}}",
+                "unhold"
+              ],
+              "variable": [],
+              "query": [
+                {
+                  "key": "issuer",
+                  "value": "{{issuerDn}}"
+                }
+              ]
+            },
+            "description": "Removes hold through EJBCA using REMOVE_FROM_CRL."
+          }
+        },
+        {
+          "name": "POST renew certificate (501)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/certificates/{{certificateId}}/renew",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "certificates",
+                ":certificateId",
+                "renew"
+              ],
+              "variable": [
+                {
+                  "key": "certificateId",
+                  "value": "{{certificateId}}"
+                }
+              ]
+            },
+            "description": "Current contract: 501 Not Implemented. Intended for certificate renewal."
+          }
+        },
+        {
+          "name": "POST export certificate (501)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"format\": \"pem\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/certificates/{{certificateId}}/export",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "certificates",
+                ":certificateId",
+                "export"
+              ],
+              "variable": [
+                {
+                  "key": "certificateId",
+                  "value": "{{certificateId}}"
+                }
+              ]
+            },
+            "description": "Current contract: 501 Not Implemented. Intended for single-certificate export."
+          }
+        },
+        {
+          "name": "POST export certificates (501)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"format\": \"pem\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/certificates/export",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "certificates",
+                "export"
+              ]
+            },
+            "description": "Current contract: 501 Not Implemented. Intended for multi-certificate export."
+          }
+        },
+        {
+          "name": "POST import certificate (501)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": ""
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/certificates/import",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "certificates",
+                "import"
+              ]
+            },
+            "description": "Current contract: 501 Not Implemented. Intended for certificate import."
+          }
+        },
+        {
+          "name": "POST bulk operation (501)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ids\": [\"{{certificateId}}\"]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/certificates/bulk/{{bulkOperation}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "certificates",
+                "bulk",
+                ":bulkOperation"
+              ],
+              "variable": [
+                {
+                  "key": "bulkOperation",
+                  "value": "revoke"
+                }
+              ]
+            },
+            "description": "Current contract: 501 Not Implemented. Generic bulk operation contract."
+          }
+        },
+        {
+          "name": "POST bulk revoke (501)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ids\": [\"{{certificateId}}\"],\n  \"reason\": \"cessation\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/certificates/bulk/revoke",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "certificates",
+                "bulk",
+                "revoke"
+              ]
+            },
+            "description": "Current contract: 501 Not Implemented. Intended for bulk revocation."
+          }
+        },
+        {
+          "name": "POST bulk renew (501)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ids\": [\"{{certificateId}}\"]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/certificates/bulk/renew",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "certificates",
+                "bulk",
+                "renew"
+              ]
+            },
+            "description": "Current contract: 501 Not Implemented. Intended for bulk renewal."
+          }
+        },
+        {
+          "name": "POST bulk delete (501)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ids\": [\"{{certificateId}}\"]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/certificates/bulk/delete",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "certificates",
+                "bulk",
+                "delete"
+              ]
+            },
+            "description": "Current contract: 501 Not Implemented. Gateway-owned projection deletion."
+          }
+        },
+        {
+          "name": "POST bulk export (501)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ids\": [\"{{certificateId}}\"],\n  \"format\": \"pem\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/certificates/bulk/export",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "certificates",
+                "bulk",
+                "export"
+              ]
+            },
+            "description": "Current contract: 501 Not Implemented. Intended for bulk export."
+          }
+        }
+      ]
+    },
+    {
+      "name": "csrs",
+      "item": [
+        {
+          "name": "GET list CSRs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/csrs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "csrs"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET CSR history",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/csrs/history",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "csrs",
+                "history"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET CSR details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/csrs/{{csrId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "csrs",
+                ":csrId"
+              ],
+              "variable": [
+                {
+                  "key": "csrId",
+                  "value": "{{csrId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET CSR export",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/csrs/{{csrId}}/export",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "csrs",
+                "{{csrId}}",
+                "export"
+              ]
+            },
+            "description": "Exports a CSR as a PEM/binary response."
+          }
+        },
+        {
+          "name": "POST create CSR",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/csrs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "csrs"
+              ]
+            },
+            "description": "Creates a CSR through the CSR service.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"common_name\": \"example.test\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "POST upload CSR",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/csrs/upload",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "csrs",
+                "upload"
+              ]
+            },
+            "description": "Uploads CSR content.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pem_content\": \"-----BEGIN CERTIFICATE REQUEST-----\\\\n...\\\\n-----END CERTIFICATE REQUEST-----\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "POST import CSR",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/csrs/import",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "csrs",
+                "import"
+              ]
+            },
+            "description": "Imports a CSR multipart request.",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "POST bulk sign CSRs",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/csrs/bulk/sign",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "csrs",
+                "bulk",
+                "sign"
+              ]
+            },
+            "description": "Signs multiple CSRs.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ids\": [\n    \"{{csrId}}\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "POST bulk delete CSRs",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/csrs/bulk/delete",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "csrs",
+                "bulk",
+                "delete"
+              ]
+            },
+            "description": "Deletes multiple CSRs.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ids\": [\n    \"{{csrId}}\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "POST sign CSR",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/csrs/{{csrId}}/sign",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "csrs",
+                "{{csrId}}",
+                "sign"
+              ]
+            },
+            "description": "Signs a CSR.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"signature_algorithm\": \"SHA256WITHRSA\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "POST upload CSR key",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/csrs/{{csrId}}/key",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "csrs",
+                "{{csrId}}",
+                "key"
+              ]
+            },
+            "description": "Uploads a key for a CSR.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"key_pem\": \"-----BEGIN PRIVATE KEY-----\\\\n...\\\\n-----END PRIVATE KEY-----\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "DELETE CSR",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/csrs/{{csrId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "csrs",
+                "{{csrId}}"
+              ]
+            },
+            "description": "Deletes a CSR."
+          }
+        }
+      ]
+    },
+    {
+      "name": "eku",
+      "item": [
+        {
+          "name": "GET known EKUs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/eku/known",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "eku",
+                "known"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "hsm",
+      "item": [
+        {
+          "name": "GET HSM providers",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/hsm/providers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "hsm",
+                "providers"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET HSM keys",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/hsm/keys",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "hsm",
+                "keys"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "import",
+      "item": [
+        {
+          "name": "POST analyze import",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/import/analyze",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "import",
+                "analyze"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST execute import",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/import/execute",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "import",
+                "execute"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "microsoft-cas",
+      "item": [
+        {
+          "name": "GET Microsoft CA enabled",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/microsoft-cas/enabled",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "microsoft-cas",
+                "enabled"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET pending Microsoft CA requests",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/microsoft-cas/requests/pending",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "microsoft-cas",
+                "requests",
+                "pending"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET Microsoft CA request",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/microsoft-cas/{{mscaId}}/requests/{{requestId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "microsoft-cas",
+                ":mscaId",
+                "requests",
+                ":requestId"
+              ],
+              "variable": [
+                {
+                  "key": "mscaId",
+                  "value": "{{mscaId}}"
+                },
+                {
+                  "key": "requestId",
+                  "value": "{{requestId}}"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -29,7 +29,16 @@ RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
     pip install --no-cache-dir -r /tmp/requirements.txt && \
     pip install --no-cache-dir --no-deps pyjks==20.0.0
 
-# Stage 2: Runtime - Minimal production image
+# Stage 2: Build the frontend bundle
+FROM node:22-alpine AS frontend-builder
+WORKDIR /frontend
+COPY frontend/package*.json ./
+COPY VERSION /VERSION
+RUN npm ci
+COPY frontend/ ./
+RUN npm run build
+
+# Stage 3: Runtime - Minimal production image
 FROM python:3.13-slim-bookworm
 
 LABEL maintainer="NeySlim <https://github.com/NeySlim>" \
@@ -66,6 +75,7 @@ WORKDIR /opt/ucm
 COPY --chown=ucm:ucm VERSION /opt/ucm/VERSION
 COPY --chown=ucm:ucm backend/ /opt/ucm/backend/
 COPY --chown=ucm:ucm frontend/ /opt/ucm/frontend/
+COPY --from=frontend-builder --chown=ucm:ucm /frontend/dist/ /opt/ucm/frontend/dist/
 COPY --chown=ucm:ucm wsgi.py /opt/ucm/wsgi.py
 COPY --chown=ucm:ucm .env.docker.example /opt/ucm/.env.example
 

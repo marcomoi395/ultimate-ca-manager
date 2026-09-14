@@ -5,11 +5,11 @@ import { apiClient, buildQueryString } from './apiClient'
 
 export const casService = {
   async getAll() {
-    return apiClient.get('/cas')
+    return apiClient.get('/cas', { apiVersion: 'v3' })
   },
 
   async getById(id) {
-    return apiClient.get(`/cas/${id}`)
+    return apiClient.get(`/cas/${id}`, { apiVersion: 'v3' })
   },
 
   async create(data) {
@@ -78,7 +78,7 @@ export const casService = {
   },
 
   async getCertificates(id, filters = {}) {
-    return apiClient.get(`/cas/${id}/certificates${buildQueryString(filters)}`)
+    return apiClient.get(`/cas/${id}/certificates${buildQueryString(filters)}`, { apiVersion: 'v3' })
   },
 
   // External-CSR lifecycle (#298)

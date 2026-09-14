@@ -5,27 +5,39 @@ import { apiClient, buildQueryString } from './apiClient'
 
 export const certificatesService = {
   async getAll(filters = {}) {
-    return apiClient.get(`/certificates${buildQueryString(filters)}`)
+    return apiClient.get(`/certificates${buildQueryString(filters)}`, { apiVersion: 'v3' })
   },
 
   async getStats() {
-    return apiClient.get('/certificates/stats')
+    return apiClient.get('/certificates/stats', { apiVersion: 'v3' })
   },
 
   async getById(id) {
-    return apiClient.get(`/certificates/${id}`)
+    return apiClient.get(`/certificates/${id}`, { apiVersion: 'v3' })
   },
 
   async create(data) {
     return apiClient.post('/certificates', data)
   },
 
+  async enroll(data) {
+    return apiClient.post(
+      '/certificates',
+      data,
+      { apiVersion: 'v3', headers: { 'Idempotency-Key': crypto.randomUUID() } },
+    )
+  },
+
   async rename(id, descr) {
     return apiClient.patch(`/certificates/${id}`, { descr })
   },
 
-  async revoke(id, reason) {
-    return apiClient.post(`/certificates/${id}/revoke`, { reason })
+  async revoke(id, { issuer, reason = 'UNSPECIFIED' }) {
+    return apiClient.post(
+      `/certificates/${id}/revoke`,
+      { issuer, reason },
+      { apiVersion: 'v3', headers: { 'Idempotency-Key': crypto.randomUUID() } }
+    )
   },
 
   async unhold(id) {
@@ -43,6 +55,16 @@ export const certificatesService = {
       include_chain: options.includeChain ?? false,
       password: options.password
     }, { responseType: 'blob' })
+  },
+
+  async exportPublic(serial, issuer, format = 'pem', options = {}) {
+    return apiClient.post(`/certificates/${serial}/export`, {
+      format,
+      issuer,
+      include_key: options.includeKey ?? false,
+      include_chain: options.includeChain ?? false,
+      password: options.password,
+    }, { apiVersion: 'v3', responseType: 'blob' })
   },
 
   async exportAll(format = 'pem', options = {}) {

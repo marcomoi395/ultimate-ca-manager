@@ -24,6 +24,7 @@ export function MultiSelectFilter({
   size = 'sm',
   searchable = false,
   className,
+  disabled = false,
 }) {
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
@@ -66,6 +67,7 @@ export function MultiSelectFilter({
   }, [options, search])
 
   const toggleOption = (optionValue) => {
+    if (disabled) return
     const newValue = selectedSet.has(optionValue)
       ? value.filter(v => v !== optionValue)
       : [...value, optionValue]
@@ -73,11 +75,11 @@ export function MultiSelectFilter({
   }
 
   const selectAll = () => {
-    onChange(options.map(o => o.value))
+    if (!disabled) onChange(options.map(o => o.value))
   }
 
   const clearAll = () => {
-    onChange([])
+    if (!disabled) onChange([])
   }
 
   const sizeStyles = {
@@ -102,7 +104,8 @@ export function MultiSelectFilter({
       {/* Trigger */}
       <button
         type="button"
-        onClick={() => setOpen(!open)}
+        onClick={() => !disabled && setOpen(!open)}
+        disabled={disabled}
         className={cn(
           'flex items-center justify-between rounded-md border',
           'focus:outline-none focus:ring-2 focus:ring-accent-primary-op30 focus:border-accent-primary',
@@ -112,6 +115,7 @@ export function MultiSelectFilter({
           'hover:bg-tertiary-op80 hover:border-text-tertiary',
           hasSelection && 'border-accent-primary-op50 bg-accent-primary-op5',
           hasSelection ? 'text-text-primary' : 'text-text-secondary',
+          disabled && 'opacity-60 cursor-not-allowed',
         )}
       >
         <span className="truncate">

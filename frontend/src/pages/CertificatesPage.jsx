@@ -6,25 +6,24 @@
  */
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useParams, useNavigate, useLocation } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { 
-  Certificate, Download, Trash, X, Plus, Info,
-  CheckCircle, Warning, UploadSimple, Clock, ArrowClockwise, LinkBreak, Star, ArrowsLeftRight,
-  PencilSimple
+  Certificate, Download, Trash, X, Info,
+  CheckCircle, Warning, Clock, ArrowClockwise, LinkBreak, Star, ArrowsLeftRight,
+  PencilSimple, UploadSimple
 } from '@phosphor-icons/react'
 import {
-  ResponsiveLayout, ResponsiveDataTable, Badge, Button, Modal, HelpCard,
+  ResponsiveLayout, ResponsiveDataTable, Badge, Button, HelpCard,
   CertificateDetails, CertificateCompareModal
 } from '../components'
 import { ExportModal } from '../components/ExportModal'
-import { SmartImportModal } from '../components/SmartImport'
 import { certificatesService, casService, truststoreService } from '../services'
 import { useNotification, useMobile, useWindowManager } from '../contexts'
 import { usePermission, useRecentHistory, useFavorites, useWebSocket, usePersistedState } from '../hooks'
 import { extractCN, cn, downloadBlob } from '../lib/utils'
-import { IssueCertificateForm } from './certificates/IssueCertificateForm'
 import { useCertificateColumns } from './certificates/useCertificateColumns'
 import { UploadKeyModal } from './certificates/UploadKeyModal'
+import { EnrollCertificateModal } from './certificates/EnrollCertificateModal'
 
 // i18n keys for known certificate issuance sources (labelKey pattern: store the
 // KEY at module level, resolve with t() in the component). Options are built
@@ -52,7 +51,6 @@ export default function CertificatesPage() {
   const { t } = useTranslation()
   const { id: urlCertId } = useParams()
   const navigate = useNavigate()
-  const location = useLocation()
   const { isMobile } = useMobile()
   const { openWindow } = useWindowManager()
   const { addToHistory } = useRecentHistory('certificates')
@@ -66,12 +64,10 @@ export default function CertificatesPage() {
   
   // Selection
   const [selectedCert, setSelectedCert] = useState(null)
-  const [showIssueModal, setShowIssueModal] = useState(false)
-  const [issueInitialData, setIssueInitialData] = useState(null)
-  const [showImportModal, setShowImportModal] = useState(false)
   const [showKeyModal, setShowKeyModal] = useState(false)
   const [showCompareModal, setShowCompareModal] = useState(false)
   const [exportRowCert, setExportRowCert] = useState(null)
+  const [showEnrollModal, setShowEnrollModal] = useState(false)
   
   // Pagination
   const [page, setPage] = useState(1)
@@ -83,7 +79,7 @@ export default function CertificatesPage() {
   const [sortOrder, setSortOrder] = useState('asc')
   
   // Filters
-  const [filterStatus, setFilterStatus] = usePersistedState('ucm-filter-certs-status', [])
+  const [filterStatus, setFilterStatus] = useState([])
   const [filterCA, setFilterCA] = usePersistedState('ucm-filter-certs-ca', [])
   const [filterSource, setFilterSource] = usePersistedState('ucm-filter-certs-source', [])
   const [filterTemplate, setFilterTemplate] = usePersistedState('ucm-filter-certs-template', [])
@@ -103,7 +99,7 @@ export default function CertificatesPage() {
     else setFilterSource([])
   }, [])
   
-  const { showSuccess, showError, showConfirm, showPrompt, showWarning } = useNotification()
+  const { showSuccess, showError, showConfirm, showPrompt } = useNotification()
   const { canWrite, canDelete, hasPermission } = usePermission()
   const { muteToasts } = useWebSocket()
 
@@ -122,17 +118,6 @@ export default function CertificatesPage() {
     return () => window.removeEventListener('ucm:data-changed', handler)
   }, [])
 
-  // Handle re-key prefill from CSRs page navigation
-  useEffect(() => {
-    if (location.state?.prefill && location.state?.source === 'rekey') {
-      if (canWrite('certificates')) {
-        setIssueInitialData(location.state.prefill)
-        setShowIssueModal(true)
-      }
-      // Clear navigation state to prevent re-triggering on refresh
-      navigate(location.pathname, { replace: true, state: {} })
-    }
-  }, [location.state])
 
   const loadData = async () => {
     try {
@@ -145,9 +130,6 @@ export default function CertificatesPage() {
         sort_by: sortBy,
         sort_order: sortOrder
       }
-      if (filterStatus.length > 0 && !filterStatus.includes('orphan')) {
-        params.status = filterStatus
-      }
       if (filterCA.length > 0) {
         params.ca_id = filterCA
       }
@@ -159,23 +141,24 @@ export default function CertificatesPage() {
       }
       if (searchValue) params.search = searchValue
       
-      const [certsRes, casRes, statsRes] = await Promise.all([
+      const [certsResult, casResult, statsResult] = await Promise.allSettled([
         certificatesService.getAll(params),
         casService.getAll(),
         certificatesService.getStats()
       ])
-      let certs = certsRes.data || []
-      
-      // Handle orphan filter client-side (no CA or CA not in our list)
-      if (filterStatus.includes('orphan') && cas.length > 0) {
-        const caRefIds = new Set(cas.map(ca => ca.refid))
-        certs = certs.filter(c => c.caref && !caRefIds.has(c.caref))
-      }
-      
+      if (certsResult.status === 'rejected') throw certsResult.reason
+
+      const certsRes = certsResult.value
+      const certs = Array.isArray(certsRes?.data) ? certsRes.data : []
       setCertificates(certs)
-      setTotal(certsRes.meta?.total || certsRes.pagination?.total || certs.length)
-      setCas(casRes.data || [])
-      setCertStats(statsRes.data || { valid: 0, expiring: 0, expired: 0, revoked: 0, total: 0 })
+      setTotal(certsRes?.meta?.total || certsRes?.pagination?.total || certs.length)
+
+      if (casResult.status === 'fulfilled') {
+        setCas(Array.isArray(casResult.value?.data) ? casResult.value.data : [])
+      }
+      if (statsResult.status === 'fulfilled') {
+        setCertStats(statsResult.value?.data || { valid: 0, expiring: 0, expired: 0, revoked: 0, total: 0 })
+      }
     } catch (error) {
       showError(error.message || t('messages.errors.loadFailed.certificates'))
     } finally {
@@ -220,29 +203,28 @@ export default function CertificatesPage() {
   // Deep-link: auto-select certificate from URL param
   useEffect(() => {
     if (urlCertId && !loading && certificates.length > 0) {
-      const id = parseInt(urlCertId, 10)
-      if (!isNaN(id)) {
-        if (!isMobile) {
-          openWindow('certificate', id)
-        } else {
-          handleSelectCert({ id })
-        }
-        navigate('/certificates', { replace: true })
+      const id = String(urlCertId)
+      if (!isMobile) {
+        openWindow('certificate', id)
+      } else {
+        handleSelectCert({ id })
       }
+      navigate('/certificates', { replace: true })
     }
   }, [urlCertId, loading, certificates.length])
 
   // Export certificate
   const handleExport = async (format, options = {}) => {
     if (!selectedCert) return
-    
+
     try {
-      const blob = await certificatesService.export(selectedCert.id, format, options)
-      const ext = { pem: 'pem', der: 'der', pkcs7: 'p7b', pkcs12: 'p12', pfx: 'pfx', jks: 'jks' }[format] || format
+      const serial = selectedCert.serial_number || selectedCert.id
+      const blob = await certificatesService.exportPublic(serial, selectedCert.issuer, format, options)
+      const ext = { pem: 'pem', der: 'der', pkcs7: 'p7b', pkcs12: 'p12', pfx: 'pfx', jks: 'jks', key: 'key' }[format] || format
       downloadBlob(blob, `${selectedCert.common_name || 'certificate'}.${ext}`)
       showSuccess(t('messages.success.export.certificate'))
-    } catch {
-      showError(t('messages.errors.exportFailed.certificate'))
+    } catch (err) {
+      showError(err?.message || t('messages.errors.exportFailed.certificate'))
     }
   }
 
@@ -264,7 +246,7 @@ export default function CertificatesPage() {
     if (!confirmed) return
     try {
       muteToasts()
-      await certificatesService.revoke(id)
+      await certificatesService.revoke(id, { issuer: cert?.issuer })
       showSuccess(t('messages.success.other.revoked'))
       loadData()
       setSelectedCert(null)
@@ -296,6 +278,19 @@ export default function CertificatesPage() {
       setSelectedCert(null)
     } catch (error) {
       showError(error.message || t('common.operationFailed'))
+    }
+  }
+
+  const handleEnroll = async (payload) => {
+    try {
+      muteToasts()
+      const response = await certificatesService.enroll(payload)
+      const enrollment = response?.data || response
+      showSuccess(t('notifications.certificateIssued', { name: enrollment?.serial_number || '' }))
+      await loadData()
+    } catch (error) {
+      showError(error.message || t('common.operationFailed'))
+      throw error
     }
   }
 
@@ -348,37 +343,39 @@ export default function CertificatesPage() {
   }
 
   // Normalize and filter data - detect orphans (cert without existing CA)
+  // EJBCA v3 caref is a CA fingerprint; local CA refid can be an internal ID.
   const filteredCerts = useMemo(() => {
-    const caRefIds = new Set(cas.map(ca => ca.refid))
-    
+    const caRefIds = new Set(cas.flatMap(ca => [ca.refid, ca.caref].filter(Boolean).map(String)))
+    const caSubjects = new Set(cas.flatMap(ca => [ca.subject, ca.issuer].filter(Boolean)))
+
     let result = certificates.map(cert => ({
       ...cert,
       status: cert.revoked ? 'revoked' : cert.status,
       cn: cert.descr || cert.cn || cert.common_name || extractCN(cert.subject) || (cert.san_dns ? JSON.parse(cert.san_dns)[0] : null) || 'Certificate',
-      isOrphan: cert.caref && !caRefIds.has(cert.caref)
+      isOrphan: Boolean(cert.caref && !caRefIds.has(String(cert.caref)) && !caSubjects.has(cert.issuer || cert.issuer_name))
     }))
     
-    if (filterStatus.length > 0) {
-      result = result.filter(c => filterStatus.includes(c.status))
+    if (filterStatus.includes('orphan')) {
+      result = result.filter(c => c.isOrphan)
     }
-    
+
     return result
   }, [certificates, cas, filterStatus, filterCA])
-
-  // Count orphans for stats
+  // Count only unresolved issuer references.
   const orphanCount = useMemo(() => {
-    const caRefIds = new Set(cas.map(ca => ca.refid))
-    return certificates.filter(c => c.caref && !caRefIds.has(c.caref)).length
+    const caRefIds = new Set(cas.flatMap(ca => [ca.refid, ca.caref].filter(Boolean).map(String)))
+    const caSubjects = new Set(cas.flatMap(ca => [ca.subject, ca.issuer].filter(Boolean)))
+    return certificates.filter(c => c.caref && !caRefIds.has(String(c.caref)) && !caSubjects.has(c.issuer || c.issuer_name)).length
   }, [certificates, cas])
 
   // Stats - from backend API for accurate counts
   // Each stat is clickable to filter the table
   const stats = useMemo(() => {
     const baseStats = [
-      { icon: CheckCircle, label: t('common.valid'), value: certStats.valid, variant: 'success', filterValue: 'valid' },
-      { icon: Warning, label: t('common.expiring'), shortLabel: t('common.expiring').substring(0, 3) + '.', value: certStats.expiring, variant: 'warning', filterValue: 'expiring' },
-      { icon: Clock, label: t('common.expired'), value: certStats.expired, variant: 'neutral', filterValue: 'expired' },
-      { icon: X, label: t('common.revoked'), shortLabel: t('common.revoked').substring(0, 3) + '.', value: certStats.revoked, variant: 'danger', filterValue: 'revoked' }
+      { icon: CheckCircle, label: t('common.valid'), value: certStats.valid, variant: 'success', filterValue: 'valid', disabled: true },
+      { icon: Warning, label: t('common.expiring'), shortLabel: t('common.expiring').substring(0, 3) + '.', value: certStats.expiring, variant: 'warning', filterValue: 'expiring', disabled: true },
+      { icon: Clock, label: t('common.expired'), value: certStats.expired, variant: 'neutral', filterValue: 'expired', disabled: true },
+      { icon: X, label: t('common.revoked'), shortLabel: t('common.revoked').substring(0, 3) + '.', value: certStats.revoked, variant: 'danger', filterValue: 'revoked', disabled: true }
     ]
     // Add orphan stat if there are any
     if (orphanCount > 0) {
@@ -388,16 +385,14 @@ export default function CertificatesPage() {
     return baseStats
   }, [certStats, orphanCount, t])
   
-  // Handle stat click to filter
   const handleStatClick = useCallback((filterValue) => {
-    setPage(1) // Reset to first page when filtering
+    if (['valid', 'expiring', 'expired', 'revoked'].includes(filterValue)) return
+    setPage(1)
     if (filterValue === '') {
-      setFilterStatus([]) // "Total" clears all
+      setFilterStatus([])
     } else {
       setFilterStatus(prev => {
-        if (prev.includes(filterValue)) {
-          return prev.filter(v => v !== filterValue)
-        }
+        if (prev.includes(filterValue)) return prev.filter(v => v !== filterValue)
         return [...prev, filterValue]
       })
     }
@@ -450,18 +445,18 @@ export default function CertificatesPage() {
       { label: t('common.delete'), icon: Trash, variant: 'danger', onClick: () => handleDelete(row.id) }
     ] : [])
   ], [canWrite, canDelete, t])
-
   // Export from row via ExportModal
   const handleExportRow = async (format, options = {}) => {
     if (!exportRowCert) return
     const cert = exportRowCert
     try {
-      const blob = await certificatesService.export(cert.id, format, options)
-      const ext = { pkcs12: 'p12', pkcs7: 'p7b', jks: 'jks' }[format] || format
+      const serial = cert.serial_number || cert.id
+      const blob = await certificatesService.exportPublic(serial, cert.issuer, format, options)
+      const ext = { pem: 'pem', der: 'der', pkcs7: 'p7b', pkcs12: 'p12', pfx: 'pfx', jks: 'jks', key: 'key' }[format] || format
       downloadBlob(blob, `${cert.common_name || cert.cn || 'certificate'}.${ext}`)
       showSuccess(t('messages.success.export.certificate'))
-    } catch {
-      showError(t('messages.errors.exportFailed.certificate'))
+    } catch (err) {
+      showError(err?.message || t('messages.errors.exportFailed.certificate'))
     }
   }
 
@@ -471,8 +466,9 @@ export default function CertificatesPage() {
       key: 'status',
       label: t('common.status'),
       type: 'multiSelect',
-      value: filterStatus,
-      onChange: (val) => { setPage(1); setFilterStatus(val) },
+      value: [],
+      disabled: true,
+      onChange: () => {},
       placeholder: t('common.allStatus'),
       options: [
         { value: 'valid', label: t('common.valid') },
@@ -567,12 +563,11 @@ export default function CertificatesPage() {
         </div>
       </HelpCard>
       <HelpCard title={t('help.exportFormats')} variant="tip">
-        {t('certificates.exportPEM')}, {t('certificates.exportDER')}, {t('certificates.exportPKCS12')}
+        {t('certificates.exportPEM')}, {t('certificates.exportDER')}, P7B
       </HelpCard>
     </div>
   )
 
-  // Slide-over content
   const slideOverContent = selectedCert ? (
     <CertificateDetails
       certificate={selectedCert}
@@ -584,6 +579,7 @@ export default function CertificatesPage() {
       onAddToTrustStore={handleAddToTrustStore}
       canWrite={canWrite('certificates')}
       canDelete={canDelete('certificates')}
+      allowPrivateExport={hasPermission('read:private_keys')}
     />
   ) : null
 
@@ -648,34 +644,23 @@ export default function CertificatesPage() {
           toolbarFilters={filters}
           toolbarActions={
             <div className="flex items-center gap-2">
+              {canWrite('certificates') && (
+                <Button
+                  type="button"
+                  size={isMobile ? 'lg' : 'sm'}
+                  onClick={() => setShowEnrollModal(true)}
+                  aria-label={t('certificates.issueCertificate')}
+                  className={isMobile ? 'w-11 h-11 p-0' : undefined}
+                >
+                  <UploadSimple size={isMobile ? 22 : 14} weight="bold" />
+                  {!isMobile && t('certificates.issueCertificate')}
+                </Button>
+              )}
               {!isMobile && (
                 <Button type="button" size="sm" variant="secondary" onClick={() => setShowCompareModal(true)}>
                   <ArrowsLeftRight size={14} />
                   {t('common.compare') || 'Compare'}
                 </Button>
-              )}
-              {canWrite('certificates') && (
-                isMobile ? (
-                  <>
-                    <Button type="button" size="lg" variant="secondary" onClick={() => setShowImportModal(true)} className="w-11 h-11 p-0">
-                      <UploadSimple size={22} weight="bold" />
-                    </Button>
-                    <Button type="button" size="lg" onClick={() => setShowIssueModal(true)} className="w-11 h-11 p-0">
-                      <Plus size={22} weight="bold" />
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <Button type="button" size="sm" variant="secondary" onClick={() => setShowImportModal(true)}>
-                      <UploadSimple size={14} />
-                      {t('common.import')}
-                    </Button>
-                    <Button type="button" size="sm" onClick={() => setShowIssueModal(true)}>
-                      <Plus size={14} weight="bold" />
-                      {t('certificates.issueCertificate').split(' ')[0]}
-                    </Button>
-                  </>
-                )
               )}
             </div>
           }
@@ -691,48 +676,17 @@ export default function CertificatesPage() {
           }}
           emptyIcon={Certificate}
           emptyTitle={t('certificates.noCertificates')}
-          emptyDescription={t('certificates.issueCertificate')}
-          emptyAction={canWrite('certificates') && (
-            <Button type="button" onClick={() => setShowIssueModal(true)}>
-              <Plus size={16} /> {t('certificates.issueCertificate')}
-            </Button>
-          )}
         />
       </ResponsiveLayout>
 
-      {/* Issue Certificate Modal */}
-      <Modal
-        open={showIssueModal}
-        onOpenChange={(open) => {
-          setShowIssueModal(open)
-          if (!open) setIssueInitialData(null)
-        }}
-        title={t('certificates.issueCertificate')}
-        size="xl"
-      >
-        <IssueCertificateForm
-          cas={cas}
-          initialData={issueInitialData}
-          onSubmit={async (data) => {
-            try {
-              muteToasts()
-              const response = await certificatesService.create(data)
-              if (response?.data?.approval_required) {
-                showWarning(t('certificates.approvalRequired', { policy: response.data.policy_name }))
-              } else {
-                showSuccess(t('messages.success.create.certificate'))
-              }
-              setShowIssueModal(false)
-              setIssueInitialData(null)
-              loadData()
-            } catch (error) {
-              showError(error.message || t('common.operationFailed'))
-            }
-          }}
-          onCancel={() => { setShowIssueModal(false); setIssueInitialData(null) }}
-          t={t}
-        />
-      </Modal>
+
+      <EnrollCertificateModal
+        open={showEnrollModal}
+        onOpenChange={setShowEnrollModal}
+        cas={cas}
+        onSubmit={handleEnroll}
+        t={t}
+      />
 
       {/* Upload Private Key Modal */}
       <UploadKeyModal
@@ -754,24 +708,15 @@ export default function CertificatesPage() {
         initialCert={selectedCert}
       />
 
-      {/* Smart Import Modal */}
-      <SmartImportModal
-        isOpen={showImportModal}
-        onClose={() => setShowImportModal(false)}
-        onImportComplete={() => {
-          setShowImportModal(false)
-          loadData()
-        }}
-      />
-
       {/* Row Export Modal */}
       <ExportModal
         open={!!exportRowCert}
         onClose={() => setExportRowCert(null)}
         entityType="certificate"
         entityName={exportRowCert?.common_name || exportRowCert?.subject || ''}
-        hasPrivateKey={!!exportRowCert?.has_private_key}
+        hasPrivateKey={hasPermission('read:private_keys')}
         canExportKey={hasPermission('read:private_keys')}
+        showChainOption={true}
         onExport={handleExportRow}
       />
     </>

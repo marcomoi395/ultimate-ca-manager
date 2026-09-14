@@ -44,6 +44,8 @@ wiki/
 
 # Application
 .env
+.env.ejbca
+secrets/ejbca/
 backend/data/*.db
 backend/data/*.db-*
 backend/data/ca/*
@@ -110,3 +112,9 @@ SECURITY_AUDIT.md
 # Local lab secrets (OpenSSL / create_app)
 .env.lab
 .env*.local
+docs/
+tasks/
+# Keep the V3 migration assessment source-controlled while preserving the
+# existing ignore policy for other docs.
+artifacts/
+scripts/ejbca_certificate_contract_probes.py

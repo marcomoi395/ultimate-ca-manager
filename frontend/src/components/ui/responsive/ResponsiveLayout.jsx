@@ -637,7 +637,7 @@ function StatsBar({ stats, isMobile, onStatClick, activeStatFilter }) {
           const isActive = Array.isArray(activeStatFilter)
             ? activeStatFilter.includes(stat.filterValue)
             : (activeStatFilter && stat.filterValue === activeStatFilter)
-          const isClickable = onStatClick && stat.filterValue !== undefined
+          const isClickable = onStatClick && stat.filterValue !== undefined && !stat.disabled
           const displayLabel = stat.shortLabel || stat.label
           
           // Premium colored pills
@@ -682,7 +682,7 @@ function StatsBar({ stats, isMobile, onStatClick, activeStatFilter }) {
         const isActive = Array.isArray(activeStatFilter)
             ? activeStatFilter.includes(stat.filterValue)
             : (activeStatFilter && stat.filterValue === activeStatFilter)
-        const isClickable = onStatClick && stat.filterValue !== undefined
+        const isClickable = onStatClick && stat.filterValue !== undefined && !stat.disabled
         
         return (
           <div 

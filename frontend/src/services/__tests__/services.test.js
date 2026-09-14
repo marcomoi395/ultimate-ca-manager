@@ -54,14 +54,14 @@ describe('casService', () => {
     casService = mod.casService
   })
 
-  it('getAll → GET /cas', async () => {
+  it('getAll → GET /cas through v3 gateway', async () => {
     await casService.getAll()
-    expect(mockApiClient.get).toHaveBeenCalledWith('/cas')
+    expect(mockApiClient.get).toHaveBeenCalledWith('/cas', { apiVersion: 'v3' })
   })
 
-  it('getById → GET /cas/:id', async () => {
+  it('getById → GET /cas/:id through v3 gateway', async () => {
     await casService.getById(5)
-    expect(mockApiClient.get).toHaveBeenCalledWith('/cas/5')
+    expect(mockApiClient.get).toHaveBeenCalledWith('/cas/5', { apiVersion: 'v3' })
   })
 
   it('create → POST /cas with data', async () => {
@@ -154,22 +154,23 @@ describe('certificatesService', () => {
     certificatesService = mod.certificatesService
   })
 
-  it('getAll → GET /certificates with filters', async () => {
+  it('getAll → GET /certificates through v3 gateway', async () => {
     await certificatesService.getAll({ status: 'valid', ca_id: 1 })
     const call = mockApiClient.get.mock.calls[0]
     expect(call[0]).toContain('/certificates')
     expect(call[0]).toContain('status=valid')
     expect(call[0]).toContain('ca_id=1')
+    expect(call[1]).toEqual({ apiVersion: 'v3' })
   })
 
-  it('getStats → GET /certificates/stats', async () => {
+  it('getStats → GET /certificates/stats through v3 gateway', async () => {
     await certificatesService.getStats()
-    expect(mockApiClient.get).toHaveBeenCalledWith('/certificates/stats')
+    expect(mockApiClient.get).toHaveBeenCalledWith('/certificates/stats', { apiVersion: 'v3' })
   })
 
-  it('getById → GET /certificates/:id', async () => {
+  it('getById → GET /certificates/:id through v3 gateway', async () => {
     await certificatesService.getById(42)
-    expect(mockApiClient.get).toHaveBeenCalledWith('/certificates/42')
+    expect(mockApiClient.get).toHaveBeenCalledWith('/certificates/42', { apiVersion: 'v3' })
   })
 
   it('create → POST /certificates', async () => {
@@ -178,9 +179,39 @@ describe('certificatesService', () => {
     expect(mockApiClient.post).toHaveBeenCalledWith('/certificates', data)
   })
 
-  it('revoke → POST /certificates/:id/revoke with reason', async () => {
-    await certificatesService.revoke(5, 'key_compromise')
-    expect(mockApiClient.post).toHaveBeenCalledWith('/certificates/5/revoke', { reason: 'key_compromise' })
+  it('enroll → POST /certificates through v3 gateway with an idempotency key', async () => {
+    const data = {
+      certificate_request: '-----BEGIN CERTIFICATE REQUEST-----...',
+      certificate_profile_name: 'TLS',
+      end_entity_profile_name: 'Default',
+      certificate_authority_name: 'ManagementCA',
+      username: 'enrollment-user',
+      password: 'enrollment-password',
+    }
+    await certificatesService.enroll(data)
+    expect(mockApiClient.post).toHaveBeenCalledWith(
+      '/certificates',
+      data,
+      expect.objectContaining({
+        apiVersion: 'v3',
+        headers: expect.objectContaining({ 'Idempotency-Key': expect.any(String) }),
+      }),
+    )
+  })
+
+  it('revoke → POST v3 with issuer and idempotency key', async () => {
+    await certificatesService.revoke('serial-1', {
+      issuer: 'CN=ManagementCA',
+      reason: 'CERTIFICATE_HOLD'
+    })
+    expect(mockApiClient.post).toHaveBeenCalledWith(
+      '/certificates/serial-1/revoke',
+      { issuer: 'CN=ManagementCA', reason: 'CERTIFICATE_HOLD' },
+      expect.objectContaining({
+        apiVersion: 'v3',
+        headers: expect.objectContaining({ 'Idempotency-Key': expect.any(String) })
+      })
+    )
   })
 
   it('renew → POST /certificates/:id/renew', async () => {
@@ -204,6 +235,13 @@ describe('certificatesService', () => {
       password: 'test'
     })
     expect(call[2]).toEqual({ responseType: 'blob' })
+  })
+  it('exportPublic → POST v3 with public format, issuer, chain option', async () => {
+    await certificatesService.exportPublic('serial-1', 'CN=Issuer', 'pkcs7', { includeChain: true })
+    const call = mockApiClient.post.mock.calls.find(c => c[0].includes('/certificates/serial-1/export'))
+    expect(call[0]).toBe('/certificates/serial-1/export')
+    expect(call[1]).toEqual({ format: 'pkcs7', issuer: 'CN=Issuer', include_key: false, include_chain: true, password: undefined })
+    expect(call[2]).toEqual({ apiVersion: 'v3', responseType: 'blob' })
   })
 
   it('import → upload /certificates/import', async () => {

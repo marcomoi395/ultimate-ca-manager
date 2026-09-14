@@ -9,6 +9,8 @@ import logging
 import datetime
 import base64
 import uuid
+import os
+import requests
 from flask import Blueprint, request, jsonify, g, Response
 from sqlalchemy import or_
 from auth.unified import require_auth
@@ -614,6 +616,41 @@ def upload_csr_private_key(csr_id):
     except Exception as e:
         logger.error(f"Failed to upload private key: {e}")
         return error_response('Failed to upload private key', 500)
+def _persist_ejbca_certificate(cert, payload):
+    response = payload.get('data', payload) if isinstance(payload, dict) else {}
+    certificate_der_b64 = response.get('certificate') if isinstance(response, dict) else None
+    chain_der_b64 = response.get('certificate_chain', []) if isinstance(response, dict) else []
+    if not isinstance(certificate_der_b64, str) or not certificate_der_b64.strip():
+        raise ValueError('EJBCA enrollment returned no certificate')
+    if not isinstance(chain_der_b64, list) or any(not isinstance(item, str) for item in chain_der_b64):
+        raise ValueError('EJBCA enrollment returned an invalid certificate chain')
+
+    csr_pem = base64.b64decode(cert.csr)
+    csr_obj = x509.load_pem_x509_csr(csr_pem, default_backend())
+    leaf_der = base64.b64decode(certificate_der_b64)
+    leaf = x509.load_der_x509_certificate(leaf_der, default_backend())
+    csr_pub = csr_obj.public_key().public_bytes(serialization.Encoding.DER, serialization.PublicFormat.SubjectPublicKeyInfo)
+    cert_pub = leaf.public_key().public_bytes(serialization.Encoding.DER, serialization.PublicFormat.SubjectPublicKeyInfo)
+    if csr_pub != cert_pub:
+        raise ValueError('EJBCA certificate public key does not match CSR')
+
+    pem_chain = [leaf.public_bytes(serialization.Encoding.PEM)]
+    for chain_item in chain_der_b64:
+        pem_chain.append(x509.load_der_x509_certificate(base64.b64decode(chain_item), default_backend()).public_bytes(serialization.Encoding.PEM))
+    cert.crt = base64.b64encode(b'\n'.join(pem_chain)).decode('utf-8')
+    cert.cert_type = 'ejbca'
+    cert.source = 'ejbca'
+    cert.imported_from = 'ejbca'
+    cert.subject = leaf.subject.rfc4514_string()
+    cert.subject_cn = cert.common_name
+    cert.issuer = leaf.issuer.rfc4514_string()
+    cert.serial_number = str(leaf.serial_number)
+    cert.valid_from = leaf.not_valid_before_utc.replace(tzinfo=None)
+    ok, error = safe_commit(logger, 'Failed to persist EJBCA certificate')
+    if not ok:
+        raise RuntimeError(error or 'Failed to persist EJBCA certificate')
+    return cert
+
 
 
 @bp.route('/api/v2/csrs/<int:csr_id>/sign', methods=['POST'])
@@ -636,8 +673,70 @@ def sign_csr(csr_id):
     
     if cert.crt:
         return error_response('CSR already signed', 400)
-    
     data = request.get_json(silent=True) or {}
+
+    if data.get('mode') == 'ejbca':
+        profile = data.get('certificate_profile_name') or 'ENDUSER'
+        end_entity_profile = data.get('end_entity_profile_name') or 'UCMDEFAULT'
+        if not isinstance(profile, str) or not isinstance(end_entity_profile, str):
+            return error_response('EJBCA profile fields must be strings', 400)
+        required = ('certificate_authority_name', 'username', 'password')
+        if any(not isinstance(data.get(field), str) or not data[field].strip() for field in required):
+            return error_response('EJBCA enrollment fields are required', 400)
+        try:
+            csr_pem = base64.b64decode(cert.csr).decode('utf-8')
+            gateway_url = os.getenv('EJBCA_GATEWAY_URL', 'http://ejbca-gateway:8081').rstrip('/')
+            headers = {'Accept': 'application/json', 'Content-Type': 'application/json'}
+            for name in ('Cookie', 'X-API-Key', 'X-CSRF-Token'):
+                value = request.headers.get(name)
+                if value:
+                    headers[name] = value
+            headers['Idempotency-Key'] = f'csr:{csr_id}:ejbca:{profile.strip()}:{end_entity_profile.strip()}:{data["certificate_authority_name"].strip()}'
+            response = requests.post(
+                f'{gateway_url}/api/v3/certificates',
+                headers=headers,
+                json={
+                    'certificate_request': csr_pem,
+                    'certificate_profile_name': profile.strip(),
+                    'end_entity_profile_name': end_entity_profile.strip(),
+                    'certificate_authority_name': data['certificate_authority_name'].strip(),
+                    'username': data['username'].strip(),
+                    'password': data['password'],
+                    'include_chain': True,
+                    'response_format': 'DER',
+                },
+                timeout=30,
+            )
+            try:
+                payload = response.json()
+            except ValueError:
+                payload = None
+            if response.status_code >= 400:
+                message = payload.get('message') if isinstance(payload, dict) else None
+                return error_response(message or 'EJBCA enrollment failed', response.status_code)
+            signed = _persist_ejbca_certificate(cert, payload)
+            AuditService.log_action(
+                action='csr_signed_ejbca',
+                resource_type='certificate',
+                resource_id=signed.id,
+                resource_name=signed.subject,
+                details='CSR signed through EJBCA gateway',
+                success=True,
+            )
+            return success_response(data=signed.to_dict(), message='CSR signed successfully')
+        except (ValueError, TypeError, base64.binascii.Error) as exc:
+            db.session.rollback()
+            logger.warning('EJBCA enrollment validation failed: %s', exc)
+            return error_response(str(exc), 502)
+        except requests.RequestException:
+            db.session.rollback()
+            logger.exception('EJBCA gateway request failed')
+            return error_response('EJBCA gateway unavailable', 502)
+        except Exception:
+            db.session.rollback()
+            logger.exception('EJBCA CSR signing failed')
+            return error_response('Failed to sign CSR through EJBCA', 502)
+
     ca_id = data.get('ca_id')
     try:
         validity_days = int(data.get('validity_days', 365))
